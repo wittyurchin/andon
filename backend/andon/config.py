@@ -20,7 +20,9 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 MockScenario = Literal["calm", "deteriorating", "storm", "clearing", "demo"]
 AppMode = Literal["auto", "mock"]
 
-WEATHER_PROVIDERS = frozenset({"auto", "open_meteo", "awc_metar", "imd", "ksndmc", "mock", "mock_station"})
+WEATHER_PROVIDERS = frozenset(
+    {"auto", "open_meteo", "awc_metar", "imd", "ksndmc", "openweathermap", "mock", "mock_station"}
+)
 TRAFFIC_PROVIDERS = frozenset({"auto", "tomtom", "mappls", "mock", "mock_outage"})
 INCIDENT_PROVIDERS = frozenset({"auto", "tomtom", "mappls", "btp", "bmc", "mock"})
 RADAR_PROVIDERS = frozenset({"auto", "rainviewer", "mock", "none"})
@@ -91,6 +93,14 @@ class Settings(BaseSettings):
 
     tomtom_api_key: str | None = None
     open_meteo_api_key: str | None = None
+
+    # OpenWeatherMap's free "Current Weather" API (data/2.5/weather). Unlike
+    # Open-Meteo's free tier, OpenWeatherMap's free tier permits commercial use
+    # (attribution required above the free plan). Its own severe-weather alerts
+    # live behind the separate "One Call by Call" product, which requires a
+    # card on file even for its free daily quota — out of scope while this
+    # stays a no-billing-surprises default (see docs/provider-verification.md).
+    openweathermap_api_key: str | None = None
 
     # IMD requires a key, but its documentation does not say how the key is
     # sent (docs/provider-verification.md). Both must be configured; we do
@@ -216,13 +226,16 @@ class Settings(BaseSettings):
         configured = _legacy(self.weather_providers, self.weather_provider)
         if configured == ["auto"]:
             if self.mode == "mock":
-                return [
+                keyed = [
                     "open_meteo" if self.open_meteo_api_key else "mock",
                     "imd" if self.imd_api_key else "mock_station",
                 ]
+                if self.openweathermap_api_key:
+                    keyed.append("openweathermap")
+                return keyed
             # Model + station, plus the India sources whose adapters exist but
             # are not usable yet — they appear in source health with the reason.
-            return ["open_meteo", "awc_metar", "imd", "ksndmc"]
+            return ["open_meteo", "awc_metar", "imd", "ksndmc", "openweathermap"]
         return _dedupe([n for n in configured if n != "auto"])
 
     @property

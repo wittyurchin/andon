@@ -63,6 +63,27 @@ export const SOURCE_INFO: Record<string, SourceInfoEntry> = {
       'Lower engineering-default confidence (0.6) than a station, because it is a prediction for a grid cell, not a measurement.',
   },
 
+  openweathermap: {
+    summary:
+      'A second, independent weather vendor’s blend of models, stations, radar and satellites — not the same ' +
+      'model as Open-Meteo, so agreement or disagreement between them is itself evidence.',
+    how:
+      'Free "Current Weather" endpoint, no card required. Own docs describe the reading as collected and ' +
+      'processed from multiple sources rather than one station’s raw report, so — like Open-Meteo — it is treated ' +
+      'as model evidence, not an observation.',
+    reports: [
+      'A numeric precipitation rate (mm/h), unlike METAR’s qualitative band — so it can disagree with METAR in a different way than Open-Meteo does',
+      'Wind, visibility and temperature for its reported location',
+    ],
+    limits: [
+      'This endpoint documents no severe-weather alerts at all. OpenWeatherMap does publish alerts, but only on a separate product that requires billing details on file even for its free daily quota — out of scope while this app avoids billing surprises',
+      'Whether its reported coordinates are the exact point requested or a nearby station/city is not documented either way, so no resolution claim is made about it',
+      'A missing rain reading is recorded as no precipitation, since the provider documents that as its meaning — not assumed to be zero by us',
+    ],
+    confidence:
+      'Same engineering-default confidence as Open-Meteo (0.6): a blended estimate for a location, not a direct measurement.',
+  },
+
   'imd-aws': {
     summary:
       'India Meteorological Department automatic weather stations. The adapter is built, but IMD does not ' +

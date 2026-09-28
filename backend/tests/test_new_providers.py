@@ -394,6 +394,98 @@ class TestOpenMeteoAccess:
 
 
 # --------------------------------------------------------------------------
+# OpenWeatherMap
+# --------------------------------------------------------------------------
+
+
+def owm_payload(**overrides) -> dict:
+    base = {
+        "coord": {"lon": 77.65, "lat": 12.91},
+        "weather": [{"id": 500, "main": "Rain", "description": "light rain"}],
+        "main": {"temp": 27.3, "humidity": 80},
+        "visibility": 6000,
+        "wind": {"speed": 3.5, "deg": 200, "gust": 6.2},
+        "rain": {"1h": 1.8},
+        "dt": 1790000000,
+    }
+    base.update(overrides)
+    return base
+
+
+class TestOpenWeatherMap:
+    def test_missing_key_is_misconfigured_not_a_network_call(self):
+        from andon.providers.weather.openweathermap import OpenWeatherMapProvider
+
+        status, details = OpenWeatherMapProvider(None).precheck()
+        assert status is HealthStatus.MISCONFIGURED
+        assert "ANDON_OPENWEATHERMAP_API_KEY" in details["reason"]
+
+    async def test_401_is_unauthorized_and_key_is_redacted(self):
+        from andon.providers.weather.openweathermap import OpenWeatherMapProvider
+
+        provider = OpenWeatherMapProvider("topsecretkey")
+        provider._client = mock_client(lambda request: httpx.Response(401))
+        response = await provider.fetch(HSR)
+        assert response.health_hint is HealthStatus.UNAUTHORIZED
+        assert response.details["key_problem"] == "rejected"
+        assert "topsecretkey" not in response.error
+
+    async def test_wind_is_converted_from_metre_per_second_even_under_metric_units(self):
+        # OpenWeather documents wind speed/gust as m/s under BOTH standard and
+        # metric — only `units=imperial` changes them (to mph).
+        from andon.providers.weather.openweathermap import OpenWeatherMapProvider
+
+        provider = OpenWeatherMapProvider("k")
+        provider._client = mock_client(lambda request: httpx.Response(200, json=owm_payload()))
+        response = await provider.fetch(HSR)
+        snap = response.data
+        assert snap.wind_speed_kmh == pytest.approx(round(3.5 * 3.6, 1))
+        assert snap.wind_gust_kmh == pytest.approx(round(6.2 * 3.6, 1))
+        assert snap.temperature_c == 27.3
+        assert snap.visibility_m == 6000
+        assert snap.precipitation_mm_h == 1.8
+        assert snap.condition == "light rain"
+        assert snap.grid_location == GeoPoint(lat=12.91, lon=77.65)
+
+    async def test_absent_rain_field_means_no_precipitation_not_zero_fabricated(self):
+        from andon.providers.weather.openweathermap import OpenWeatherMapProvider
+
+        payload = owm_payload()
+        del payload["rain"]
+        provider = OpenWeatherMapProvider("k")
+        provider._client = mock_client(lambda request: httpx.Response(200, json=payload))
+        response = await provider.fetch(HSR)
+        assert response.data.precipitation_mm_h is None
+
+    async def test_no_station_identity_so_it_is_classified_as_model_evidence(self):
+        # No station_id/station_name is ever set — the evidence layer routes
+        # anything without those through the same "model" path as Open-Meteo.
+        from andon.providers.weather.openweathermap import OpenWeatherMapProvider
+
+        provider = OpenWeatherMapProvider("k")
+        provider._client = mock_client(lambda request: httpx.Response(200, json=owm_payload()))
+        response = await provider.fetch(HSR)
+        assert response.data.station_id is None
+        assert response.data.station_name is None
+
+    async def test_no_alerts_are_claimed(self):
+        from andon.providers.weather.openweathermap import OpenWeatherMapProvider
+
+        provider = OpenWeatherMapProvider("k")
+        provider._client = mock_client(lambda request: httpx.Response(200, json=owm_payload()))
+        response = await provider.fetch(HSR)
+        assert response.data.alerts == []
+        assert response.data.alerts_supported is False
+
+    def test_source_declares_correctly(self):
+        from andon.providers.weather.openweathermap import OpenWeatherMapProvider
+
+        source = OpenWeatherMapProvider("k").source
+        assert source.id == "openweathermap"
+        assert source.kind == "weather"
+
+
+# --------------------------------------------------------------------------
 # RainViewer radar
 # --------------------------------------------------------------------------
 

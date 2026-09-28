@@ -43,7 +43,7 @@ its own source card, and is assessed independently:
 
 | Setting | Values |
 |---|---|
-| `ANDON_WEATHER_PROVIDERS` | `open_meteo`, `awc_metar`, `imd`, `ksndmc`, `mock`, `mock_station` |
+| `ANDON_WEATHER_PROVIDERS` | `open_meteo`, `awc_metar`, `imd`, `ksndmc`, `openweathermap`, `mock`, `mock_station` |
 | `ANDON_TRAFFIC_PROVIDERS` | `tomtom`, `mappls`, `mock`, `mock_outage` |
 | `ANDON_INCIDENT_PROVIDERS` | `tomtom`, `mappls`, `btp`, `bmc`, `mock` |
 | `ANDON_RADAR_PROVIDERS` | `rainviewer`, `mock`, `none` |
@@ -54,7 +54,7 @@ An unknown name fails at startup rather than silently falling back.
 
 | Signal | `ANDON_MODE=auto` | `ANDON_MODE=mock` |
 |---|---|---|
-| Weather | `open_meteo, awc_metar, imd, ksndmc` | `open_meteo` if `ANDON_OPEN_METEO_API_KEY` is set, else `mock`; `imd` if `ANDON_IMD_API_KEY` is set, else `mock_station` |
+| Weather | `open_meteo, awc_metar, imd, ksndmc, openweathermap` | `open_meteo` if `ANDON_OPEN_METEO_API_KEY` is set, else `mock`; `imd` if `ANDON_IMD_API_KEY` is set, else `mock_station`; `openweathermap` appended if `ANDON_OPENWEATHERMAP_API_KEY` is set |
 | Traffic | `tomtom` if `ANDON_TOMTOM_API_KEY` is set, else `mock`; plus `mappls` | the keyed providers (`tomtom`, `mappls`) if any key is set, else `mock, mock_outage` |
 | Incidents | `tomtom` if keyed, else `mock`; plus `mappls` | `tomtom` if keyed, else `mock` |
 | Radar | `rainviewer` | `mock` |
@@ -76,6 +76,7 @@ Credentials:
 | `ANDON_TOMTOM_API_KEY` | TomTom flow + incidents | Sent as the documented `key` query parameter. |
 | `ANDON_MAPPLS_ACCESS_TOKEN` | Mappls corridor ETAs | Static console key, documented `access_token` query parameter. The key must have Predictive Routing enabled. |
 | `ANDON_OPEN_METEO_API_KEY` | Open-Meteo | Switches to the commercial host. Without it, the free non-commercial API is used. |
+| `ANDON_OPENWEATHERMAP_API_KEY` | OpenWeatherMap | Free, no card needed for this endpoint. Its severe-weather alerts are a separate paid product requiring billing details even for the free quota, so they are not fetched. |
 | `ANDON_IMD_API_KEY` + `ANDON_IMD_AUTH_HEADER` *or* `ANDON_IMD_AUTH_QUERY_PARAM` | IMD | IMD does not document how the key is sent, so the name must be configured; none is guessed. `ANDON_IMD_AWS_STATE_ID` is also configuration (the id table is unpublished). |
 | `ANDON_RAINVIEWER_TERMS_ACKNOWLEDGED=true` | RainViewer | Not a credential: an explicit statement that your use is personal or educational, which the free API requires. |
 
@@ -439,6 +440,7 @@ From [provider-verification.md](provider-verification.md#open-items):
   Nowcast frames are mentioned in the docs but the live index returned none, so
   they are not used.
 - **Open-Meteo** — commercial subscription before production use.
+- **OpenWeatherMap** — whether its `coord` response field echoes the exact query point or a nearby station/city location is undocumented either way.
 - **TomTom** — account terms and quotas (account-specific; not recorded).
 - **KSNDMC** — a data-access agreement.
 

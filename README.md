@@ -53,6 +53,7 @@ To add live signals, copy `.env.example` to `.env` and fill in what you have:
 | `ANDON_MAPPLS_ACCESS_TOKEN` | Live-traffic travel times along each access road (Predictive Routing must be enabled on the key) |
 | `ANDON_IMD_API_KEY` + `ANDON_IMD_AUTH_HEADER` or `ANDON_IMD_AUTH_QUERY_PARAM` | IMD weather stations (IMD does not document how the key is sent) |
 | `ANDON_OPEN_METEO_API_KEY` | Open-Meteo's commercial API (the free one is non-commercial) |
+| `ANDON_OPENWEATHERMAP_API_KEY` | A second, independent weather source — free, no card needed |
 | `ANDON_RAINVIEWER_TERMS_ACKNOWLEDGED=true` | RainViewer radar — only for personal or educational use |
 
 Other settings — provider lists, the SQLite path and retention, freshness
@@ -75,7 +76,7 @@ refresh runs the full pipeline:
 ```
 Access graph        which roads lead to the kitchen (OpenStreetMap)
       ↓
-Data sources        Open-Meteo · METAR · IMD · radar · TomTom · Mappls · mocks
+Data sources        Open-Meteo · OpenWeatherMap · METAR · IMD · radar · TomTom · Mappls · mocks
       ↓
 Evidence            observations / forecasts with provenance, stored in SQLite
       ↓
@@ -103,9 +104,15 @@ questions, and where they disagree that is itself information:
   for *what is*. Intensity arrives as a band (`-RA` / `RA` / `+RA`) rather than
   a rate, so the provider carries the band instead of inventing millimetres. No
   forecast, so its trend comes from the station's own observation history.
+- **OpenWeatherMap** — a second, independent vendor's blend of models,
+  stations, radar and satellites (needs `ANDON_OPENWEATHERMAP_API_KEY`, free,
+  no card required). A numeric rain rate rather than METAR's band, so it and
+  METAR sometimes disagree in a different way than Open-Meteo does. Its
+  severe-weather alerts sit behind a separate paid subscription that needs
+  billing details even for the free portion, so this app does not fetch them.
 
 ```bash
-ANDON_WEATHER_PROVIDERS=open_meteo,awc_metar
+ANDON_WEATHER_PROVIDERS=open_meteo,awc_metar,openweathermap
 ```
 
 Each provider gets **its own tile**, tagged `Model` or `Observed`. A

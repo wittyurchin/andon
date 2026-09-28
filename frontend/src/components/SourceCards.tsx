@@ -23,6 +23,8 @@ export function SourceCards({ evidence, now }: { evidence: EvidenceBundle; now: 
   const sources = [...evidence.source_health].sort(
     (a, b) => KIND_ORDER.indexOf(a.source_kind) - KIND_ORDER.indexOf(b.source_kind) || a.source_id.localeCompare(b.source_id),
   )
+  const weatherSources = sources.filter((h) => h.source_kind === 'weather')
+  const otherSources = sources.filter((h) => h.source_kind !== 'weather')
   const graph = evidence.access_graph
 
   return (
@@ -32,8 +34,16 @@ export function SourceCards({ evidence, now }: { evidence: EvidenceBundle; now: 
         <span className="panel__meta">Click a source to see everything it has reported</span>
       </header>
 
+      {weatherSources.length > 0 && (
+        <div className="source-cards source-cards--row">
+          {weatherSources.map((h) => (
+            <SourceCard key={h.source_id} h={h} evidence={evidence} now={now} onOpen={() => setSelected(h.source_id)} />
+          ))}
+        </div>
+      )}
+
       <div className="source-cards">
-        {sources.map((h) => (
+        {otherSources.map((h) => (
           <SourceCard key={h.source_id} h={h} evidence={evidence} now={now} onOpen={() => setSelected(h.source_id)} />
         ))}
         {graph && (

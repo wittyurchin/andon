@@ -49,6 +49,21 @@ we do not have.
 | ❌ Portal page | `mausam.imd.gov.in/responsive/apis.php` (which mentioned IP whitelisting) now returns 404. |
 | Adapter behaviour | Requires `ANDON_IMD_API_KEY` **and** an explicit `ANDON_IMD_AUTH_HEADER` or `ANDON_IMD_AUTH_QUERY_PARAM` — we do not guess. Missing → `misconfigured`. 401/403 → `unauthorized`. Undocumented units/codes are stored verbatim with `unit: null`, never converted. |
 
+### OpenWeatherMap — 🔒 *adapter built, needs `ANDON_OPENWEATHERMAP_API_KEY`*
+
+| | |
+|---|---|
+| ✅ Endpoint | `GET https://api.openweathermap.org/data/2.5/weather?lat=&lon=&appid=&units=metric` (`openweathermap.org/current`) |
+| ✅ Units | `units=metric` gives Celsius, but **wind speed/gust stay metre/second** even under `metric` — only `imperial` changes them (to mph). Converted to km/h by us. |
+| ✅ `rain.1h` | mm/h, and **absent (not zero) when there is no rain** ("these weather phenomena are just not happened for the time of measurement") — a missing field is recorded as no precipitation, not fabricated. |
+| ✅ Data basis | Own docs: "collected and processed from different sources such as global and local weather models, satellites, radars and a vast network of weather stations" — a blend, not a single station's raw report. Extracted as model/forecast evidence, same rule as Open-Meteo. |
+| ❌ Alerts | This endpoint documents none. Alerts exist only on the separate One Call 3.0/4.0 product. |
+| ⚠️ One Call gated behind billing | One Call requires the "One Call by Call" subscription, which needs a card on file even for its free 1,000 calls/day (openweathermap.org/api/one-call-3, openweathermap.org/price, and user reports of billing details being required at signup). Out of scope while this stays a no-billing-surprises default. |
+| ✅ Licence | Free tier **permits commercial use** (attribution obligatory above the free plan, per `openweathermap.org/faq`) — more permissive than Open-Meteo's non-commercial-only free tier. |
+| ✅ Rate limit | 429 on exceeding the day/month quota (FAQ), not a per-second limiter; the account can be throttled for "a couple of hours to several days" after repeated overage. |
+| ❌ Coordinate snapping | Whether the response's `coord` echoes the exact query point or a nearby station/city is not documented either way — no resolution or "grid cell" claim is made, only plain distance. |
+| Adapter behaviour | `ANDON_OPENWEATHERMAP_API_KEY` unset → `misconfigured`. 401 → `unauthorized`. |
+
 ### KSNDMC (Karnataka) — ❌ *adapter boundary only, disabled*
 
 | | |

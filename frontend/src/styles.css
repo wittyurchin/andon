@@ -1419,6 +1419,25 @@ a {
   gap: 10px;
 }
 
+.source-cards + .source-cards {
+  margin-top: 10px;
+}
+
+/* Weather cards stay on one row regardless of how many there are or how
+   narrow the window is — they scroll sideways rather than wrapping and
+   breaking up the "weather at a glance" grouping. */
+.source-cards--row {
+  display: flex;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+
+.source-cards--row .source-card {
+  flex: 1 0 210px;
+  min-width: 210px;
+}
+
 .source-card {
   all: unset;
   box-sizing: border-box;
