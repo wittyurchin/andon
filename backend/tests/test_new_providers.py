@@ -832,11 +832,16 @@ class TestSachetFeedParsing:
         assert _parse_cap("x", "<not valid xml") is None
 
 
+# Inside the captured sample alert's window (15:46 to 18:46 IST on 2026-09-28);
+# the real clock made this test fail once that alert expired.
+SACHET_NOW = datetime(2026, 9, 28, 11, 0, tzinfo=timezone.utc)
+
+
 class TestSachetProvider:
     async def test_matching_state_produces_an_alert_with_its_caveat(self):
         from andon.providers.weather.ndma_sachet import NdmaSachetAlertProvider
 
-        provider = NdmaSachetAlertProvider()
+        provider = NdmaSachetAlertProvider(clock=lambda: SACHET_NOW)
 
         def handler(request):
             if "rss" in str(request.url):
@@ -858,7 +863,7 @@ class TestSachetProvider:
     async def test_non_matching_state_produces_no_alerts(self):
         from andon.providers.weather.ndma_sachet import NdmaSachetAlertProvider
 
-        provider = NdmaSachetAlertProvider()
+        provider = NdmaSachetAlertProvider(clock=lambda: SACHET_NOW)
 
         def handler(request):
             if "rss" in str(request.url):
@@ -877,7 +882,7 @@ class TestSachetProvider:
     async def test_outside_india_never_matches_by_construction(self):
         from andon.providers.weather.ndma_sachet import NdmaSachetAlertProvider
 
-        provider = NdmaSachetAlertProvider()
+        provider = NdmaSachetAlertProvider(clock=lambda: SACHET_NOW)
 
         def handler(request):
             if "rss" in str(request.url):
@@ -897,7 +902,7 @@ class TestSachetProvider:
         # Nominatim's usage policy requires caching results on our side.
         from andon.providers.weather.ndma_sachet import NdmaSachetAlertProvider
 
-        provider = NdmaSachetAlertProvider()
+        provider = NdmaSachetAlertProvider(clock=lambda: SACHET_NOW)
         geocode_calls = []
 
         def handler(request):

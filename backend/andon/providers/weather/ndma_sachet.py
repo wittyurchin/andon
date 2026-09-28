@@ -140,7 +140,9 @@ class NdmaSachetAlertProvider(WeatherProvider):
     domain. Outside India this always yields no alerts, by construction: no
     Indian state name will ever match."""
 
-    def __init__(self, timeout_s: float = 8.0) -> None:
+    def __init__(self, timeout_s: float = 8.0, clock=None) -> None:
+        # Injectable so tests can sit inside a captured alert's validity window.
+        self._clock = clock or (lambda: datetime.now(timezone.utc))
         self._client = httpx.AsyncClient(
             timeout=timeout_s,
             headers={"User-Agent": "andon-situation-awareness/0.1"},
@@ -164,7 +166,7 @@ class NdmaSachetAlertProvider(WeatherProvider):
         return None
 
     async def _fetch(self, point: GeoPoint, context: FetchContext) -> WeatherSnapshot:
-        now = datetime.now(timezone.utc)
+        now = self._clock()
         await self._ensure_feed_fresh()
         state = await self._state_for(point)
 
@@ -213,7 +215,7 @@ class NdmaSachetAlertProvider(WeatherProvider):
                 if parsed is not None:
                     self._alerts[identifier] = parsed
 
-        now = datetime.now(timezone.utc)
+        now = self._clock()
         stale = [i for i, a in self._alerts.items() if a.expires and a.expires < now - timedelta(hours=6)]
         for i in stale:
             del self._alerts[i]
