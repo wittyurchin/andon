@@ -44,7 +44,9 @@ ICON_CATEGORY: dict[int, IncidentCategory] = {
     4: IncidentCategory.HAZARD,  # rain
     5: IncidentCategory.HAZARD,  # ice
     6: IncidentCategory.CONGESTION,
-    7: IncidentCategory.ROAD_CLOSURE,  # lane closed
+    # Documented as 7 = Lane Closed, 8 = Road Closed. Keeping them apart:
+    # a lane closure is not a closed road.
+    7: IncidentCategory.LANE_CLOSURE,
     8: IncidentCategory.ROAD_CLOSURE,
     9: IncidentCategory.CONSTRUCTION,
     10: IncidentCategory.HAZARD,  # wind
@@ -67,6 +69,7 @@ PROBABILITY_CONFIDENCE = {
 COVERED = [
     IncidentCategory.ACCIDENT,
     IncidentCategory.ROAD_CLOSURE,
+    IncidentCategory.LANE_CLOSURE,
     IncidentCategory.CONSTRUCTION,
     IncidentCategory.CONGESTION,
     IncidentCategory.FLOODING,

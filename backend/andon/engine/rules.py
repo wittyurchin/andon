@@ -83,6 +83,8 @@ INCIDENT_BASE: dict[IncidentCategory, Severity] = {
     IncidentCategory.FLOODING: Severity.SEVERE,
     IncidentCategory.WATERLOGGING: Severity.HIGH,
     IncidentCategory.ROAD_CLOSURE: Severity.HIGH,
+    # The road stays open, at reduced capacity.
+    IncidentCategory.LANE_CLOSURE: Severity.MEDIUM,
     IncidentCategory.ACCIDENT: Severity.MEDIUM,
     IncidentCategory.EVENT: Severity.MEDIUM,
     IncidentCategory.HAZARD: Severity.MEDIUM,

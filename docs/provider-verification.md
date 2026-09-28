@@ -122,6 +122,7 @@ rainfall job into one restaurant-chain "Live Weather" sheet.
 | ✅ Flow Segment Data v4 | `/traffic/services/4/flowSegmentData/{style}/{zoom}/{format}?key&point&unit` — `frc`, `currentSpeed`, `freeFlowSpeed`, `currentTravelTime`, `freeFlowTravelTime`, `confidence` (0–1), `roadClosure`, `coordinates` (`tomtom/flow-segment-data.html`). Zoom controls which road classes are matchable; we use 18 (zoom 10 snapped HSR probes to an arterial ~1 km away, zoom 18 matched within 1–4 m, tested 2026-09-27) |
 | ✅ Incident Details v5 | `bbox` is `minLon,minLat,maxLon,maxLat`; `iconCategory` 0–11,14; `magnitudeOfDelay` 0 unknown, 1 minor, 2 moderate, 3 major, 4 undefined (`tomtom/incident-details.html`) |
 | 🐛 Fixed | The previous request did not include `id` in `fields`, so every incident lost its source record id. |
+| 🐛 Fixed | `iconCategory` 7 (Lane Closed) was mapped to road closure alongside 8 (Road Closed). They are now separate categories: a lane closure is not a closed road. |
 | ❌ Pricing / quotas | Not recorded here; account-specific. |
 
 ### Mappls (MapmyIndia) — ⚠️ *partial: corridor ETA only*

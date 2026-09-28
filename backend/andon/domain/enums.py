@@ -211,6 +211,9 @@ class IncidentCategory(str, Enum):
     WATERLOGGING = "waterlogging"
     FLOODING = "flooding"
     ROAD_CLOSURE = "road_closure"
+    # A lane closed while the road stays open (TomTom iconCategory 7). Not a
+    # road closure: traffic still passes, slower.
+    LANE_CLOSURE = "lane_closure"
     ACCIDENT = "accident"
     CONSTRUCTION = "construction"
     CONGESTION = "congestion"

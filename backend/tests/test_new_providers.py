@@ -284,6 +284,63 @@ class TestTomTomFlow:
         assert "/absolute/18/" in ENDPOINT
 
 
+# A real TomTom closure near HSR Layout (2026-09-28): 13th Cross Road, from
+# 12th Main Road to 14th Main Road. The closed road itself is not named.
+CLOSURE_LINE = [
+    [77.6368590951, 12.9156786527],
+    [77.6373888314, 12.9155981798],
+    [77.6378702879, 12.9155405007],
+    [77.6381680131, 12.9155297982],
+]
+
+
+def tomtom_incident(icon: int, description: str, **props) -> dict:
+    return {
+        "type": "Feature",
+        "geometry": {"type": "LineString", "coordinates": CLOSURE_LINE},
+        "properties": {
+            "id": f"tt-{icon}",
+            "iconCategory": icon,
+            "magnitudeOfDelay": 4,
+            "events": [{"description": description, "code": 401, "iconCategory": icon}],
+            "from": "12th Main Road",
+            "to": "14th Main Road",
+            "length": 142.97,
+            "roadNumbers": [],
+            "probabilityOfOccurrence": "probable",
+            **props,
+        },
+    }
+
+
+class TestTomTomIncidents:
+    def test_lane_closed_is_not_a_road_closure(self):
+        # TomTom documents iconCategory 7 = Lane Closed, 8 = Road Closed.
+        from andon.domain.enums import IncidentCategory
+        from andon.providers.incidents.tomtom import TomTomIncidentProvider
+
+        provider = TomTomIncidentProvider("k")
+        lane = provider._parse_incident(0, tomtom_incident(7, "Lane closed"), HSR)
+        road = provider._parse_incident(1, tomtom_incident(8, "Closed"), HSR)
+        assert lane.category is IncidentCategory.LANE_CLOSURE
+        assert road.category is IncidentCategory.ROAD_CLOSURE
+
+    def test_both_closure_kinds_are_declared_covered(self):
+        from andon.domain.enums import IncidentCategory
+        from andon.providers.incidents.tomtom import COVERED
+
+        assert IncidentCategory.LANE_CLOSURE in COVERED
+        assert IncidentCategory.ROAD_CLOSURE in COVERED
+
+    def test_lane_closure_ranks_below_a_road_closure(self):
+        from andon.domain.enums import IncidentCategory
+        from andon.engine import rules
+
+        lane = rules.incident_severity(IncidentCategory.LANE_CLOSURE, 0.5)
+        road = rules.incident_severity(IncidentCategory.ROAD_CLOSURE, 0.5)
+        assert lane.rank < road.rank
+
+
 class TestKeyFailuresAreLoud:
     """A bad key or an exhausted plan is reported as exactly that — never masked."""
 
