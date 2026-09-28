@@ -38,7 +38,7 @@ export function AccessPanel({ evidence }: { evidence: EvidenceBundle }) {
 
       <ul className="access">
         {graph.approaches.map((approach) => {
-          const { readings, incidents, level } = states[approach.id]
+          const { readings, incidents, nearby, level } = states[approach.id]
           const trend = evidence.trends.find(
             (t) => t.subject_id === approach.id && (t.category === 'traffic.flow' || t.category === 'traffic.corridor_eta'),
           )
@@ -70,6 +70,23 @@ export function AccessPanel({ evidence }: { evidence: EvidenceBundle }) {
               {incidents.map((i) => (
                 <p key={i.id} className="access__incident">
                   <span className="access__incident-type">{i.incident_type.replace(/_/g, ' ')} on this road</span>
+                  {i.description}
+                  {incidentSpan(i.attributes) && ` · ${incidentSpan(i.attributes)}`}
+                  <span className="access__src">
+                    {i.source_name}
+                    {i.source_type === 'mock' && ' (mock)'}
+                  </span>
+                </p>
+              ))}
+
+              {nearby.map((i) => (
+                <p key={i.id} className="access__incident access__incident--near">
+                  <span className="access__incident-type">
+                    {i.incident_type.replace(/_/g, ' ')}{' '}
+                    {i.spatial.near_distance_m != null && i.spatial.near_distance_m <= 20
+                      ? 'meets this road'
+                      : `near this road (${distance(i.spatial.near_distance_m ?? null)}), not on it`}
+                  </span>
                   {i.description}
                   {incidentSpan(i.attributes) && ` · ${incidentSpan(i.attributes)}`}
                   <span className="access__src">

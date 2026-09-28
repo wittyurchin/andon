@@ -382,7 +382,7 @@ class Extractor:
                 f"{incident.location.lat:.4f},{incident.location.lon:.4f}" if incident.location else "",
                 incident.description,
             ])
-            ctx = spatial.road(restaurant.location, incident.location, graph)
+            ctx = spatial.road(restaurant.location, incident.location, graph, line=_line(incident.geometry))
             out.append(IncidentEvidence(
                 id=obs_id(restaurant.id, response.source.id, identity)[:16],
                 restaurant_id=restaurant.id,
@@ -419,3 +419,22 @@ class Extractor:
 
 def _band(severity: Severity | None) -> str | None:
     return severity.value if severity is not None else None
+
+
+def _line(geometry: dict | None) -> list[tuple[float, float]] | None:
+    """(lon, lat) points of a GeoJSON LineString, or its longest part."""
+    if not isinstance(geometry, dict):
+        return None
+    coords = geometry.get("coordinates") or []
+    if geometry.get("type") == "LineString":
+        parts = [coords]
+    elif geometry.get("type") == "MultiLineString":
+        parts = coords
+    else:
+        return None
+    lines = [
+        [(float(p[0]), float(p[1])) for p in part if isinstance(p, (list, tuple)) and len(p) >= 2]
+        for part in parts
+    ]
+    lines = [line for line in lines if len(line) >= 2]
+    return max(lines, key=len) if lines else None

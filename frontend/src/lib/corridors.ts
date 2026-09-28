@@ -5,6 +5,8 @@ const RANK: Record<string, number> = { none: 0, low: 1, medium: 2, high: 3, seve
 export interface CorridorState {
   readings: Observation[]
   incidents: IncidentEvidence[]
+  /** Near this road but not on it: listed, never counted in its level. */
+  nearby: IncidentEvidence[]
   /** null when nothing reports on this road: unknown, not clear. */
   level: Severity | null
 }
@@ -23,6 +25,7 @@ export function corridorStates(evidence: EvidenceBundle): Record<string, Corrido
   for (const a of graph.approaches) {
     const readings = flows.filter((o) => o.subject_id === a.id)
     const incidents = active.filter((i) => i.spatial.approach_ids.includes(a.id))
+    const nearby = active.filter((i) => (i.spatial.near_approach_ids ?? []).includes(a.id))
     const worst = readings.reduce<Severity | null>((acc, o) => {
       const band = o.value.band as Severity | null
       return band && (acc === null || RANK[band] > RANK[acc]) ? band : acc
@@ -31,7 +34,7 @@ export function corridorStates(evidence: EvidenceBundle): Record<string, Corrido
     // reference) is still a reading: shown as "reported, not graded".
     let level: Severity | null = worst ?? (readings.length ? 'none' : null)
     if (incidents.length && RANK[worst ?? 'none'] < 3) level = 'high'
-    out[a.id] = { readings, incidents, level }
+    out[a.id] = { readings, incidents, nearby, level }
   }
   return out
 }

@@ -46,6 +46,11 @@ class SpatialContext(BaseModel):
     nearest_segment_distance_m: float | None = None
     approach_ids: list[str] = Field(default_factory=list)
     on_approach: bool = False
+    # Access roads the item is near but not on (a parallel street, a
+    # junction), nearest first, with the distance to the nearest. Listed
+    # alongside the road; never counted as on it.
+    near_approach_ids: list[str] = Field(default_factory=list)
+    near_distance_m: float | None = None
     basis: str = ""  # one line explaining how relevance was derived
 
 

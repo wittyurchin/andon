@@ -200,6 +200,9 @@ export interface SpatialContext {
   nearest_segment_distance_m: number | null
   approach_ids: string[]
   on_approach: boolean
+  /** Access roads it is near but not on (parallel street, junction), nearest first. */
+  near_approach_ids?: string[]
+  near_distance_m?: number | null
   basis: string
 }
 

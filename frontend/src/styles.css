@@ -1575,6 +1575,14 @@ table,
   background: var(--high-wash);
   border: 1px solid color-mix(in oklch, var(--high) 40%, var(--line));
 }
+/* near but not on: listed for awareness, quiet, never a severity wash */
+.access__incident--near {
+  background: var(--panel);
+  border: 1px dashed var(--ink-4);
+}
+.access__incident--near .access__incident-type {
+  color: var(--ink-2);
+}
 .access__incident-type {
   font-size: var(--fs-xs);
   font-weight: 700;

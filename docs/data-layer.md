@@ -244,8 +244,24 @@ km) or `local` (coarser). A model's grid-cell centre is used as its location,
 so "model estimate for a grid cell 2 km away" is what the UI says.
 
 **Road-bound phenomena** (traffic, incidents) depend on whether they are **on
-an access corridor** — within 40 m of a segment of the restaurant's access
-graph, or sampled by the provider for that corridor:
+an access corridor**, or sampled by the provider for that corridor:
+
+- **A point** (e.g. an accident reported as a point) is on a corridor within
+  20 m of it.
+- **A line** (a closure or a jam, reported with the stretch it covers) is on a
+  corridor only if at least 30 m of it runs within 20 m of the corridor *and
+  roughly parallel* to it (within 35°). A street crossing at a junction fails
+  the parallel test; a parallel street fails the distance test.
+- Within 60 m but not on it, the item is **near** the corridor
+  (`near_approach_ids`, `near_distance_m`): listed under that road, never
+  counted in its severity. Within 20 m but not running along it, it
+  **meets** the road (crosses or joins it).
+
+The thresholds were measured on live TomTom incidents around HSR Layout
+(2026-09-28): incidents on Outer Ring Road sat 1 to 12 m from the
+OpenStreetMap line, while a closure on the parallel 13th Cross Road sat 35 m
+away along its whole length. The previous single 40 m radius counted that
+closure as being on Outer Ring Road.
 
 | Distance | on a corridor | off corridor |
 |---|---|---|

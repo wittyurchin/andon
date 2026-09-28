@@ -368,6 +368,83 @@ class TestTomTomIncidents:
         assert lane.rank < road.rank
 
 
+class TestOnOrNearAnAccessRoad:
+    """A line incident is on an access road only if it runs along it.
+
+    Synthetic geometry around one straight east-west access road, shaped on
+    what was measured live: jams on Outer Ring Road sat 1 to 12 m from the
+    mapped line; a closure on the parallel 13th Cross Road sat 35 m away.
+    """
+
+    LAT = 12.914
+    M_LAT = 1 / 111_320  # degrees per metre of latitude
+    KITCHEN = GeoPoint(lat=12.9125, lon=77.644)
+
+    def graph(self):
+        from andon.domain.enums import SourceType
+        from andon.evidence.models import AccessGraph, AccessSegment, Approach
+
+        road = [(77.640, self.LAT), (77.644, self.LAT), (77.648, self.LAT)]
+        return AccessGraph(
+            restaurant_id="r", source="osm", source_type=SourceType.DERIVED, built_at=NOW,
+            radius_m=700, derivation="test",
+            approaches=[Approach(
+                id="r:main-road:east", restaurant_id="r", label="Main Road · east", road_name="Main Road",
+                road_class="primary", bearing="N", bearing_deg=0.0, distance_m=165.0, length_m=870.0,
+                probe=GeoPoint(lat=self.LAT, lon=77.646), entry=GeoPoint(lat=self.LAT, lon=77.648),
+                segment_ids=["s1"], derivation="test",
+            )],
+            segments=[AccessSegment(
+                id="s1", restaurant_id="r", approach_id="r:main-road:east", road_name="Main Road",
+                road_class="primary", geometry=road, length_m=870.0, bearing="N", bearing_deg=0.0,
+                distance_m=165.0,
+            )],
+        )
+
+    def judge(self, line=None, point=None):
+        from andon.evidence import spatial
+
+        location = point or GeoPoint(lat=line[0][1], lon=line[0][0])
+        return spatial.road(self.KITCHEN, location, self.graph(), line=line)
+
+    def test_a_stretch_along_the_road_is_on_it(self):
+        ctx = self.judge(line=[(77.641, self.LAT + 5 * self.M_LAT), (77.646, self.LAT + 5 * self.M_LAT)])
+        assert ctx.on_approach and ctx.approach_ids == ["r:main-road:east"]
+
+    def test_a_parallel_street_35_m_away_is_near_not_on(self):
+        # The 13th Cross Road case: parallel to the access road, 35 m off it.
+        ctx = self.judge(line=[(77.641, self.LAT + 35 * self.M_LAT), (77.6423, self.LAT + 35 * self.M_LAT)])
+        assert not ctx.on_approach
+        assert ctx.near_approach_ids == ["r:main-road:east"]
+        assert 33 <= ctx.near_distance_m <= 37
+        assert "not on it" in ctx.basis
+
+    def test_a_street_crossing_at_a_junction_meets_the_road(self):
+        ctx = self.judge(line=[(77.644, self.LAT - 70 * self.M_LAT), (77.644, self.LAT + 70 * self.M_LAT)])
+        assert not ctx.on_approach
+        assert ctx.near_approach_ids == ["r:main-road:east"]
+        assert "meets access corridor" in ctx.basis
+
+    def test_a_jam_overlapping_the_corridor_tip_is_on_it(self):
+        # Seen live: 797 m of jam on the road, mostly beyond the mapped
+        # corridor, overlapping its outer tip for about 45 m.
+        ctx = self.judge(line=[(77.6476, self.LAT + 2 * self.M_LAT), (77.656, self.LAT + 2 * self.M_LAT)])
+        assert ctx.on_approach
+
+    def test_a_point_uses_distance_alone(self):
+        close = self.judge(point=GeoPoint(lat=self.LAT + 10 * self.M_LAT, lon=77.645))
+        apart = self.judge(point=GeoPoint(lat=self.LAT + 35 * self.M_LAT, lon=77.645))
+        assert close.on_approach
+        assert not apart.on_approach and apart.near_approach_ids == ["r:main-road:east"]
+
+    def test_geojson_line_is_read_and_points_are_not_lines(self):
+        from andon.evidence.extract import _line
+
+        assert _line({"type": "LineString", "coordinates": CLOSURE_LINE}) == [tuple(p) for p in CLOSURE_LINE]
+        assert _line({"type": "Point", "coordinates": [77.6, 12.9]}) is None
+        assert _line(None) is None
+
+
 class TestKeyFailuresAreLoud:
     """A bad key or an exhausted plan is reported as exactly that — never masked."""
 
