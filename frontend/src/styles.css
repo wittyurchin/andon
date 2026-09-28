@@ -1598,6 +1598,242 @@ table,
   background: var(--medium-wash);
 }
 
+/* ------------------------------------------------------------ closures */
+
+.closures {
+  display: grid;
+  grid-template-columns: minmax(0, 1.7fr) minmax(280px, 1fr);
+  gap: var(--s-4);
+  align-items: start;
+}
+.closures__mapwrap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+.closures__map {
+  height: 440px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--sunk);
+  z-index: 0;
+}
+/* The basemap recedes: the only colour on the map is closures and traffic. */
+.map-tiles {
+  filter: grayscale(1) contrast(0.92) brightness(1.04);
+}
+.closures .leaflet-container {
+  font: inherit;
+  background: var(--sunk);
+}
+.closures .leaflet-control-attribution {
+  font-size: 11px;
+  background: color-mix(in oklch, var(--panel) 85%, transparent);
+}
+.closures .leaflet-bar a {
+  color: var(--ink);
+}
+
+/* access roads, coloured exactly as on the compass */
+.leaflet-container .map-road {
+  stroke: var(--ink-2);
+  stroke-opacity: 0.85;
+}
+.leaflet-container .map-road.sev-low,
+.leaflet-container .map-road.sev-medium,
+.leaflet-container .map-road.sev-high,
+.leaflet-container .map-road.sev-severe {
+  stroke: var(--sev);
+  stroke-opacity: 1;
+}
+.leaflet-container .map-road--unknown {
+  stroke: var(--ink-4);
+  stroke-dasharray: 4 7;
+}
+
+/* a closed road reads as a barrier: red with a light dash through it */
+.leaflet-container .map-closure--base {
+  stroke: var(--severe);
+  stroke-opacity: 1;
+}
+.leaflet-container .map-closure--dash {
+  stroke: var(--panel);
+  stroke-opacity: 1;
+}
+.leaflet-container .map-lane--base {
+  stroke: var(--medium);
+  stroke-opacity: 1;
+}
+.leaflet-container .map-lane--dash {
+  stroke: var(--medium-ink);
+  stroke-opacity: 1;
+  stroke-dasharray: 2 6;
+}
+.leaflet-container .map-closure-pt {
+  stroke: var(--severe-ink);
+  fill: var(--severe);
+  fill-opacity: 1;
+}
+.leaflet-container .map-lane-pt {
+  stroke: var(--medium-ink);
+  fill: var(--medium);
+  fill-opacity: 1;
+}
+.map-kitchen {
+  background: var(--ink);
+  border: 2px solid var(--panel);
+  box-shadow: 0 0 0 1px var(--ink);
+  border-radius: 2px;
+}
+
+.leaflet-tooltip.leaflet-tooltip {
+  background: var(--ink);
+  color: var(--panel);
+  border: none;
+  border-radius: var(--radius-sm);
+  box-shadow: none;
+  padding: 7px 10px;
+  font-size: var(--fs-xs);
+  line-height: 1.45;
+  /* Leaflet's tooltip pane has no width, so a wrapping tooltip would shrink
+     to its longest word; size it to its content, capped. */
+  width: max-content;
+  max-width: 260px;
+  white-space: normal;
+}
+.leaflet-tooltip-top::before,
+.leaflet-tooltip-bottom::before,
+.leaflet-tooltip-left::before,
+.leaflet-tooltip-right::before {
+  display: none;
+}
+.map-tip strong {
+  display: block;
+  font-weight: 650;
+  margin-bottom: 2px;
+}
+
+.closures__legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  font-size: var(--fs-xs);
+  color: var(--ink-2);
+}
+.closures__legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.lgm {
+  display: inline-block;
+  width: 18px;
+  height: 6px;
+  border-radius: 1px;
+  flex: none;
+}
+.lgm--closure {
+  background: repeating-linear-gradient(90deg, var(--severe) 0 5px, var(--panel) 5px 8px);
+  box-shadow: inset 0 0 0 1px var(--severe);
+}
+.lgm--lane {
+  background: repeating-linear-gradient(90deg, var(--medium) 0 3px, var(--medium-ink) 3px 5px);
+}
+.lgm--road {
+  background: var(--ink-2);
+  border-radius: 3px;
+}
+.lgm--kitchen {
+  width: 10px;
+  height: 10px;
+  background: var(--ink);
+}
+
+.closures__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  max-height: 520px;
+  overflow-y: auto;
+}
+.closures__flow {
+  font-size: var(--fs-sm);
+  color: var(--ink-2);
+  padding: var(--s-2) var(--s-3);
+  background: var(--sunk);
+  border-radius: var(--radius-sm);
+}
+.closure-list {
+  display: flex;
+  flex-direction: column;
+}
+.closure-item {
+  border-top: 1px solid var(--line-soft);
+}
+.closure-item:first-child {
+  border-top: none;
+}
+.closure-item__btn {
+  all: unset;
+  box-sizing: border-box;
+  width: 100%;
+  cursor: pointer;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 2px var(--s-2);
+  padding: var(--s-2) var(--s-2);
+  border-radius: var(--radius-sm);
+  transition: background 160ms var(--ease);
+}
+.closure-item__btn:hover,
+.closure-item.is-focused .closure-item__btn {
+  background: var(--sunk);
+}
+.closure-item__btn:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: -2px;
+}
+.closure-item__kind {
+  grid-row: span 3;
+  align-self: start;
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  padding: 1px 7px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+.closure-item__kind--road_closure {
+  color: var(--severe-ink);
+  background: var(--severe-wash);
+  box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--severe) 45%, transparent);
+}
+.closure-item__kind--lane_closure {
+  color: var(--medium-ink);
+  background: var(--medium-wash);
+  box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--medium) 55%, transparent);
+}
+.closure-item__span {
+  font-size: var(--fs-md);
+  font-weight: 600;
+}
+.closure-item__meta {
+  font-size: var(--fs-xs);
+  color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
+}
+.closure-item__rel {
+  font-size: var(--fs-xs);
+  color: var(--ink-2);
+}
+.closure-item__rel.is-on {
+  color: var(--severe-ink);
+  font-weight: 700;
+}
+.closure-item__rel.is-near {
+  color: var(--ink);
+  font-weight: 600;
+}
+
 /* -------------------------------------------------------------- report */
 
 .panel--report {
@@ -2220,6 +2456,15 @@ table,
 @media (max-width: 980px) {
   .verdict {
     grid-template-columns: 1fr;
+  }
+  .closures {
+    grid-template-columns: 1fr;
+  }
+  .closures__map {
+    height: 360px;
+  }
+  .closures__list {
+    max-height: none;
   }
   .compass__svg {
     max-width: 360px;

@@ -158,6 +158,15 @@ rainfall job into one restaurant-chain "Live Weather" sheet.
 | Our usage | One query per restaurant when its access graph is built, then cached in SQLite. Far inside the limit. |
 | Classification | **Derived dataset.** Approach corridors are our grouping of OSM roads, labelled as such. |
 
+### OpenStreetMap tiles — ✅ *basemap for the road-closure map*
+
+| | |
+|---|---|
+| ✅ Endpoint | `https://tile.openstreetmap.org/{z}/{x}/{y}.png`, loaded by the browser via Leaflet 1.9 |
+| ✅ Policy | `operations.osmfoundation.org/policies/tiles/` (checked 2026-09-28): show "© OpenStreetMap contributors" linked to the copyright page; the browser must send its normal Referer (no restrictive Referrer-Policy); no bulk, pre-seeded or offline downloading; heavy use may be blocked without notice. |
+| ⚠️ Production | No SLA, and "commercial services should be especially aware that access may be withdrawn at any point." A production deployment needs a paid tile provider or self-hosted tiles. |
+| Display | Tiles are shown greyscale (CSS filter) so closures and traffic are the only colour on the map. |
+
 ---
 
 ## Open items

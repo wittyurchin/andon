@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { AccessPanel } from './components/AccessPanel'
 import { ChangesPanel } from './components/ChangesPanel'
+import { ClosureMap } from './components/ClosureMap'
 import { EvidenceInspector, type InspectorFilter } from './components/EvidenceInspector'
 import { EvidencePanel } from './components/EvidencePanel'
 import { Header } from './components/Header'
@@ -109,6 +110,7 @@ export default function App() {
           <OverallBanner situation={data.situation} evidence={data.evidence} />
           <SignalCards situation={data.situation} now={now} onInspect={openInspector} />
           <AccessPanel evidence={data.evidence} />
+          <ClosureMap evidence={data.evidence} />
           <ReportPanel report={data.report} now={now} />
 
           <div className="grid grid--two">

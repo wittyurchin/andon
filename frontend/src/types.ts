@@ -230,6 +230,12 @@ export interface Observation {
   raw_reference: string | null
 }
 
+/** GeoJSON geometry as the source reported it. */
+export interface Geometry {
+  type: 'Point' | 'LineString' | 'MultiLineString' | string
+  coordinates: unknown
+}
+
 export interface IncidentEvidence {
   id: string
   source_id: string
@@ -240,6 +246,8 @@ export interface IncidentEvidence {
   status: 'active' | 'cleared'
   description: string
   location: GeoPoint | null
+  /** The stretch it covers (e.g. a closure), when the source reported it. */
+  geometry?: Geometry | null
   first_seen: string
   last_seen: string
   observed_at: string | null
@@ -295,6 +303,16 @@ export interface Approach {
   is_approximation: boolean
 }
 
+export interface AccessSegment {
+  id: string
+  approach_id: string | null
+  road_name: string | null
+  road_class: string | null
+  /** (lon, lat) pairs, OpenStreetMap order. */
+  geometry: [number, number][]
+  length_m: number
+}
+
 export interface AccessGraph {
   source: 'osm' | 'configured' | 'radial' | 'mock'
   source_type: SourceType
@@ -303,6 +321,7 @@ export interface AccessGraph {
   derivation: string
   attribution: string | null
   approaches: Approach[]
+  segments?: AccessSegment[]
   notes: string[]
 }
 

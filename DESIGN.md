@@ -166,6 +166,7 @@ Flat by default: depth comes from the paper/panel step and 1px lines. One shadow
 - **Disagreement.** An ink "Sources disagree" tag leading a full-width statement above the cards. Never a footnote.
 - **Tables.** Uppercase label heads, 1px soft rules, stale rows in Ink 3, raw text in mono under the derived value. Wrapped in a horizontal scroller with a 640px minimum on phones.
 - **Drawer.** Right sheet, Details and Info tabs, key-value lists at 160px label width.
+- **Road-closure map.** Leaflet on greyscale OpenStreetMap tiles, beside a list that carries the same facts as text. Closed roads are drawn as a barrier (severe red with a light dash through it), lane closures amber with a dark dash, access roads in their traffic colour (dashed when unknown), the kitchen as the ink square. Clicking a list entry flies the map to that stretch at street level and opens its tooltip. The first view frames the kitchen, its roads and closures within 2 km; scroll-wheel zoom is off so the page scrolls normally.
 
 ## 6. Do's and Don'ts
 
