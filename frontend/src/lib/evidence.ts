@@ -86,3 +86,16 @@ export function describe(o: Observation): string {
       return JSON.stringify(v)
   }
 }
+
+/**
+ * Where an incident starts and ends, as the source names them. For TomTom
+ * these are location names (usually cross streets), not the road the
+ * incident is on, so they are always phrased as "from X to Y".
+ */
+export function incidentSpan(attributes: Record<string, unknown>): string {
+  const from = typeof attributes.from === 'string' ? attributes.from : null
+  const to = typeof attributes.to === 'string' ? attributes.to : null
+  if (from && to) return `from ${from} to ${to}`
+  if (from) return `starting at ${from}`
+  return ''
+}

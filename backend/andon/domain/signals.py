@@ -276,7 +276,15 @@ class Incident(BaseModel):
     description: str
     distance_km: float | None = None
     bearing: str | None = None
+    # The road the incident is on, only when the source actually names it
+    # (e.g. TomTom roadNumbers). Never filled from where it starts or ends.
     road: str | None = None
+    # Where the incident starts and ends, as the source names them. TomTom's
+    # "from"/"to" are location names (usually cross streets), not the road
+    # the incident is on: a closure "from 12th Main Road to 14th Main Road"
+    # lies on a third road between them.
+    from_location: str | None = None
+    to_location: str | None = None
     severity_hint: Severity | None = None
     reported_at: datetime | None = None
     last_reported_at: datetime | None = None

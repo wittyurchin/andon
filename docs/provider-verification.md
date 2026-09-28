@@ -123,6 +123,7 @@ rainfall job into one restaurant-chain "Live Weather" sheet.
 | ✅ Incident Details v5 | `bbox` is `minLon,minLat,maxLon,maxLat`; `iconCategory` 0–11,14; `magnitudeOfDelay` 0 unknown, 1 minor, 2 moderate, 3 major, 4 undefined (`tomtom/incident-details.html`) |
 | 🐛 Fixed | The previous request did not include `id` in `fields`, so every incident lost its source record id. |
 | 🐛 Fixed | `iconCategory` 7 (Lane Closed) was mapped to road closure alongside 8 (Road Closed). They are now separate categories: a lane closure is not a closed road. |
+| 🐛 Fixed | `from` / `to` are documented as "the name of the location where the traffic due to the incident starts / ends" (usually cross streets), not the road the incident is on. The adapter stored `from` as the incident's road, so a closure on 13th Cross Road (from 12th Main Road to 14th Main Road, checked against OpenStreetMap on 2026-09-28) was reported as "on 12th Main Road". Only `roadNumbers` names the road itself; `from`/`to` are now kept as the incident's ends. |
 | ❌ Pricing / quotas | Not recorded here; account-specific. |
 
 ### Mappls (MapmyIndia) — ⚠️ *partial: corridor ETA only*

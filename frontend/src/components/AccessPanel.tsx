@@ -1,5 +1,5 @@
 import { corridorStates } from '../lib/corridors'
-import { distance } from '../lib/evidence'
+import { distance, incidentSpan } from '../lib/evidence'
 import { TREND_ARROW } from '../lib/format'
 import type { EvidenceBundle, Observation, Trend } from '../types'
 import { Mark, Pips, markFor } from './marks'
@@ -71,6 +71,7 @@ export function AccessPanel({ evidence }: { evidence: EvidenceBundle }) {
                 <p key={i.id} className="access__incident">
                   <span className="access__incident-type">{i.incident_type.replace(/_/g, ' ')} on this road</span>
                   {i.description}
+                  {incidentSpan(i.attributes) && ` · ${incidentSpan(i.attributes)}`}
                   <span className="access__src">
                     {i.source_name}
                     {i.source_type === 'mock' && ' (mock)'}

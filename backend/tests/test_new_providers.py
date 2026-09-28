@@ -332,6 +332,33 @@ class TestTomTomIncidents:
         assert IncidentCategory.LANE_CLOSURE in COVERED
         assert IncidentCategory.ROAD_CLOSURE in COVERED
 
+    def test_from_and_to_are_the_ends_not_the_road(self):
+        # TomTom: "from" is where the incident starts, "to" where it ends.
+        # This closure lies on 13th Cross Road, between the two main roads.
+        from andon.providers.incidents.tomtom import TomTomIncidentProvider
+
+        closure = TomTomIncidentProvider("k")._parse_incident(0, tomtom_incident(8, "Closed"), HSR)
+        assert closure.road is None
+        assert closure.from_location == "12th Main Road"
+        assert closure.to_location == "14th Main Road"
+
+    def test_road_numbers_name_the_road_itself(self):
+        from andon.providers.incidents.tomtom import TomTomIncidentProvider
+
+        closure = TomTomIncidentProvider("k")._parse_incident(
+            0, tomtom_incident(8, "Closed", roadNumbers=["NH44"]), HSR
+        )
+        assert closure.road == "NH44"
+
+    def test_sentence_never_puts_a_closure_on_its_start_street(self):
+        from andon.engine.normalize import _incident_sentence
+        from andon.providers.incidents.tomtom import TomTomIncidentProvider
+
+        closure = TomTomIncidentProvider("k")._parse_incident(0, tomtom_incident(8, "Closed"), HSR)
+        sentence = _incident_sentence(closure)
+        assert "from 12th Main Road to 14th Main Road" in sentence
+        assert "on 12th Main Road" not in sentence
+
     def test_lane_closure_ranks_below_a_road_closure(self):
         from andon.domain.enums import IncidentCategory
         from andon.engine import rules

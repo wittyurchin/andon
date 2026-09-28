@@ -1071,6 +1071,10 @@ def _incident_sentence(incident: Incident) -> str:
         parts.append(f"{incident.distance_km:.1f} km{bearing} of the restaurant")
     if incident.road:
         parts.append(f"on {incident.road}")
+    if incident.from_location and incident.to_location:
+        parts.append(f"from {incident.from_location} to {incident.to_location}")
+    elif incident.from_location:
+        parts.append(f"starting at {incident.from_location}")
     return ", ".join(parts)
 
 

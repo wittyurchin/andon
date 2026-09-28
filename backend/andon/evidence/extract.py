@@ -403,6 +403,8 @@ class Extractor:
                 attributes={
                     k: v for k, v in {
                         "road": incident.road,
+                        "from": incident.from_location,
+                        "to": incident.to_location,
                         "severity_hint": incident.severity_hint.value if incident.severity_hint else None,
                         "delay_s": incident.delay_s,
                         "length_m": incident.length_m,

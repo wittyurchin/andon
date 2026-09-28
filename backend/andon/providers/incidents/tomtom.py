@@ -146,10 +146,10 @@ class TomTomIncidentProvider(IncidentProvider):
         category = ICON_CATEGORY.get(int(props.get("iconCategory") or 0), IncidentCategory.OTHER)
         nearest = _nearest_point(raw.get("geometry") or {}, origin)
 
-        road = props.get("from") or None
-        roads = props.get("roadNumbers") or []
-        if roads:
-            road = f"{road} ({', '.join(roads)})" if road else ", ".join(roads)
+        # "from"/"to" are documented as the names of the locations where the
+        # incident starts and ends, not the road it is on; only roadNumbers
+        # names the road itself.
+        roads = [r for r in (props.get("roadNumbers") or []) if r]
 
         geometry = raw.get("geometry") or None
         return Incident(
@@ -160,7 +160,9 @@ class TomTomIncidentProvider(IncidentProvider):
             description=description,
             distance_km=round(haversine_km(origin, nearest), 2) if nearest else None,
             bearing=bearing_label(origin, nearest) if nearest else None,
-            road=road,
+            road=", ".join(roads) if roads else None,
+            from_location=props.get("from") or None,
+            to_location=props.get("to") or None,
             severity_hint=DELAY_SEVERITY.get(int(props.get("magnitudeOfDelay") or 0)),
             reported_at=_parse_ts(props.get("startTime")),
             last_reported_at=_parse_ts(props.get("lastReportTime")),
@@ -174,7 +176,7 @@ class TomTomIncidentProvider(IncidentProvider):
             length_m=_num(props.get("length")),
             attributes={
                 k: props[k]
-                for k in ("magnitudeOfDelay", "probabilityOfOccurrence", "numberOfReports", "to")
+                for k in ("magnitudeOfDelay", "probabilityOfOccurrence", "numberOfReports")
                 if props.get(k) is not None
             },
         )
