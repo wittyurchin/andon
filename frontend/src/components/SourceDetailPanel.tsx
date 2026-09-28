@@ -1,9 +1,10 @@
 import { Fragment, useEffect, useState } from 'react'
 import { fetchSourceDetail } from '../api'
 import { ROAD_NETWORK_INFO, SOURCE_INFO, type SourceInfoEntry } from '../data/sourceInfo'
-import { APPLICABILITY_LABEL, CATEGORY_LABEL, HEALTH_LABEL, age, describe, distance } from '../lib/evidence'
+import { APPLICABILITY_LABEL, CATEGORY_LABEL, age, describe, distance } from '../lib/evidence'
 import { clockTime, relativeTime } from '../lib/format'
 import type { EvidenceBundle, Observation, SourceDetail } from '../types'
+import { Lamp, Mark, markFor } from './marks'
 import { ROAD_NETWORK_ID } from './SourceCards'
 
 type Tab = 'details' | 'info'
@@ -58,7 +59,7 @@ export function SourceDetailPanel({ restaurantId, sourceId, evidence, now, onClo
         <header className="drawer__head">
           <p className="eyebrow">{eyebrow}</p>
           <h2 className="drawer__title">{title}</h2>
-          {!isRoadNetwork && health && <span className={`health health--${health.status}`}>{HEALTH_LABEL[health.status]}</span>}
+          {!isRoadNetwork && health && <Lamp status={health.status} />}
         </header>
 
         <div className="drawer__tabs" role="tablist">
@@ -153,7 +154,7 @@ function Detail({ detail, now }: { detail: SourceDetail; now: number }) {
         <h3 className="report__subtitle">Status</h3>
         <dl className="kv">
           <dt>Source id</dt><dd>{source?.id ?? health?.source_id}</dd>
-          <dt>Type</dt><dd>{source?.mode === 'mock' ? 'Mock — simulated, not real' : 'Live external provider'}</dd>
+          <dt>Type</dt><dd>{source?.mode === 'mock' ? 'Mock: simulated, not real' : 'Live external provider'}</dd>
           <dt>Last checked</dt><dd>{health ? `${clockTime(health.checked_at)} (${relativeTime(health.checked_at, now)})` : '—'}</dd>
           <dt>Last success</dt><dd>{health?.last_success_at ? relativeTime(health.last_success_at, now) : 'never'}</dd>
           <dt>Last failure</dt><dd>{health?.last_failure_at ? relativeTime(health.last_failure_at, now) : '—'}</dd>
@@ -186,7 +187,7 @@ function Detail({ detail, now }: { detail: SourceDetail; now: number }) {
       {detail.incidents.length > 0 && (
         <section className="drawer__section">
           <h3 className="report__subtitle">Incidents ({detail.incidents.length})</h3>
-          <table className="evidence-table">
+          <div className="table-scroll"><table className="evidence-table">
             <thead><tr><th>Incident</th><th>Status</th><th>Seen</th><th>Where</th><th>Conf.</th></tr></thead>
             <tbody>
               {detail.incidents.map((i) => (
@@ -209,12 +210,12 @@ function Detail({ detail, now }: { detail: SourceDetail; now: number }) {
                 </tr>
               ))}
             </tbody>
-          </table>
+          </table></div>
         </section>
       )}
 
       <ObservationTable
-        title={`History — last ${detail.history_minutes} min (${detail.history.length})`}
+        title={`History, last ${detail.history_minutes} min (${detail.history.length})`}
         rows={detail.history}
         empty="No stored history yet."
       />
@@ -229,13 +230,13 @@ function ObservationTable({ title, rows, empty }: { title: string; rows: Observa
       {rows.length === 0 ? (
         <p className="empty">{empty}</p>
       ) : (
-        <table className="evidence-table">
+        <div className="table-scroll"><table className="evidence-table">
           <thead><tr><th>What</th><th>Value</th><th>When</th><th>Where</th><th>Conf.</th></tr></thead>
           <tbody>
             {rows.map((o) => (
               <tr key={o.id} className={o.stale ? 'is-stale' : ''}>
                 <td>
-                  <span className={`kind kind--${o.kind === 'observation' ? 'observed' : 'forecast'}`}>{o.kind}</span>
+                  <Mark kind={markFor(o)} />
                   <span className="evidence-table__cat">{CATEGORY_LABEL[o.category] ?? o.category}</span>
                   {o.subject_id && <span className="evidence-table__subject">{o.subject_id.split(':').pop()}</span>}
                 </td>
@@ -261,7 +262,7 @@ function ObservationTable({ title, rows, empty }: { title: string; rows: Observa
               </tr>
             ))}
           </tbody>
-        </table>
+        </table></div>
       )}
     </section>
   )
@@ -282,7 +283,7 @@ function RoadNetwork({ evidence, now }: { evidence: EvidenceBundle; now: number 
       </section>
       <section className="drawer__section">
         <h3 className="report__subtitle">Corridors ({graph.approaches.length})</h3>
-        <table className="evidence-table">
+        <div className="table-scroll"><table className="evidence-table">
           <thead><tr><th>Corridor</th><th>Class</th><th>Nearest</th><th>Length</th><th>Segments</th></tr></thead>
           <tbody>
             {graph.approaches.map((a) => (
@@ -302,7 +303,7 @@ function RoadNetwork({ evidence, now }: { evidence: EvidenceBundle; now: number 
               </tr>
             ))}
           </tbody>
-        </table>
+        </table></div>
       </section>
     </>
   )

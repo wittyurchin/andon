@@ -6,6 +6,7 @@ import { EvidencePanel } from './components/EvidencePanel'
 import { Header } from './components/Header'
 import { KeyProblemsAlert } from './components/KeyProblemsAlert'
 import { HistoryStrip } from './components/HistoryStrip'
+import { Legend } from './components/Legend'
 import { OutlookPanel } from './components/OutlookPanel'
 import { OverallBanner } from './components/OverallBanner'
 import { ReportPanel } from './components/ReportPanel'
@@ -88,6 +89,8 @@ export default function App() {
         onEdit={() => setEditing(true)}
       />
 
+      <Legend />
+
       {error && (
         <div className="alert" role="alert">
           <strong>Situation data unavailable.</strong> {error}
@@ -103,7 +106,7 @@ export default function App() {
         <>
           <KeyProblemsAlert evidence={data.evidence} />
           <SourceCards evidence={data.evidence} now={now} />
-          <OverallBanner situation={data.situation} />
+          <OverallBanner situation={data.situation} evidence={data.evidence} />
           <SignalCards situation={data.situation} now={now} onInspect={openInspector} />
           <AccessPanel evidence={data.evidence} />
           <ReportPanel report={data.report} now={now} />
@@ -123,12 +126,11 @@ export default function App() {
 
           <footer className="footer">
             <span>
-              Assessment generated {new Date(data.situation.generated_at).toLocaleString()} ·
-              signature {data.situation.fingerprint}
+              Assessment generated {new Date(data.situation.generated_at).toLocaleString()} · signature{' '}
+              <span className="mono">{data.situation.fingerprint}</span>
             </span>
             <span>
-              Rule-based classification · LLM reasoning · no signal is invented when a source is
-              unavailable
+              Rule-based classification · LLM reasoning · no signal is invented when a source is unavailable
             </span>
           </footer>
         </>

@@ -1,14 +1,7 @@
-import {
-  FRESHNESS_LABEL,
-  KIND_LABEL,
-  SEVERITY_LABEL,
-  TREND_ARROW,
-  TREND_LABEL,
-  formatFacetValue,
-  relativeTime,
-} from '../lib/format'
+import { FRESHNESS_LABEL, TREND_ARROW, TREND_LABEL, formatFacetValue, relativeTime } from '../lib/format'
 import type { NormalizedSituation, SignalAssessment } from '../types'
 import type { InspectorFilter } from './EvidenceInspector'
+import { Mark, Pips, markForKind, type Epistemic } from './marks'
 
 const TITLES: Record<string, string> = {
   weather: 'Weather',
@@ -16,11 +9,11 @@ const TITLES: Record<string, string> = {
   road_conditions: 'Road conditions',
 }
 
-const BASIS_LABEL: Record<string, string> = {
-  observation: 'Observed',
-  model: 'Model',
-  simulated: 'Simulated',
-  unknown: '',
+const BASIS_MARK: Record<string, Epistemic | null> = {
+  observation: 'measured',
+  model: 'model',
+  simulated: 'simulated',
+  unknown: null,
 }
 
 export function SignalCards({
@@ -37,24 +30,32 @@ export function SignalCards({
   // tile per source is more useful than a tile that hides the conflict.
   const weatherTiles = situation.weather_sources.length > 0 ? situation.weather_sources : [situation.weather]
   const trafficTiles = situation.traffic_sources.length > 0 ? situation.traffic_sources : [situation.traffic]
+  const disagreements = [
+    { signal: situation.weather, filter: 'weather' as const },
+    { signal: situation.traffic, filter: 'traffic' as const },
+  ].filter(({ signal }) => signal.disagreement)
 
   return (
-    <>
-      {[
-        { signal: situation.weather, filter: 'weather' as const },
-        { signal: situation.traffic, filter: 'traffic' as const },
-      ]
-        .filter(({ signal }) => signal.disagreement)
-        .map(({ signal, filter }) => (
-          <p key={filter} className="disagreement" role="status">
-            <strong>Sources disagree ({TITLES[signal.kind].toLowerCase()}):</strong> {signal.disagreement}.
-            {' '}The nearest reliable source is used for scoring and confidence is lowered.{' '}
-            <button type="button" className="link link--inline" onClick={() => onInspect(filter)}>
-              Inspect the evidence
-            </button>
+    <section className="signals">
+      <header className="signals__head">
+        <h2 className="section-title">Signals</h2>
+        <p className="section-meta">One card per source, so a conflict stays visible instead of averaged away.</p>
+      </header>
+
+      {disagreements.map(({ signal, filter }) => (
+        <div key={filter} className="disagreement" role="status">
+          <span className="disagreement__tag">Sources disagree</span>
+          <p>
+            <strong>{TITLES[signal.kind]}:</strong> {signal.disagreement}. The nearest reliable source is used for
+            scoring and confidence is lowered.
           </p>
-        ))}
-      <section className="cards">
+          <button type="button" className="button button--quiet" onClick={() => onInspect(filter)}>
+            Inspect the evidence
+          </button>
+        </div>
+      ))}
+
+      <div className="cards">
         {weatherTiles.map((signal, index) => (
           <SignalCard key={`weather-${signal.source_label ?? index}`} signal={signal} now={now} />
         ))}
@@ -62,17 +63,18 @@ export function SignalCards({
           <SignalCard key={`traffic-${signal.source_label ?? index}`} signal={signal} now={now} />
         ))}
         <SignalCard signal={situation.road_conditions} now={now} />
-      </section>
-    </>
+      </div>
+    </section>
   )
 }
 
 function SignalCard({ signal, now }: { signal: SignalAssessment; now: number }) {
   const unavailable = signal.status === 'unavailable'
   const mocked = signal.sources.some((s) => s.mode === 'mock')
-  const basis = BASIS_LABEL[signal.basis]
+  const basis = mocked ? 'simulated' : BASIS_MARK[signal.basis]
   const stale = signal.freshness === 'stale'
   const labelled = signal.kind !== 'road_conditions' && signal.source_label
+  const facets = signal.facets.filter((f) => f.available).slice(0, 4)
 
   return (
     <article className={`card ${unavailable ? 'card--down' : `sev-${signal.severity}`} ${stale ? 'card--stale' : ''}`}>
@@ -81,18 +83,10 @@ function SignalCard({ signal, now }: { signal: SignalAssessment; now: number }) 
           {TITLES[signal.kind]}
           {labelled && <span className="card__source-label">{signal.source_label}</span>}
         </h3>
-        {unavailable ? (
-          <span className="tag tag--down">Source down</span>
-        ) : (
-          <span className="tag">{SEVERITY_LABEL[signal.severity]}</span>
-        )}
+        {unavailable ? <span className="tag tag--down">Source down</span> : <Pips level={signal.severity} />}
       </header>
 
-      {!unavailable && basis && (
-        <span className={`basis basis--${mocked ? 'simulated' : signal.basis}`}>
-          {mocked ? `Simulated ${basis.toLowerCase()}` : basis}
-        </span>
-      )}
+      {!unavailable && basis && <Mark kind={basis} />}
 
       <p className="card__headline">{signal.headline}</p>
       {signal.detail && <p className="card__detail">{signal.detail}</p>}
@@ -111,22 +105,17 @@ function SignalCard({ signal, now }: { signal: SignalAssessment; now: number }) 
             {signal.trend_note && <p className="card__trend-note">{signal.trend_note}</p>}
           </div>
 
-          {signal.facets.filter((f) => f.available).length > 0 && (
+          {facets.length > 0 && (
             <dl className="facets">
-              {signal.facets
-                .filter((facet) => facet.available)
-                .slice(0, 4)
-                .map((facet) => (
-                  <div key={facet.key} className={`facet sev-text-${facet.severity}`}>
-                    <dt>
-                      {facet.label}
-                      {facet.kind !== 'observed' && (
-                        <span className={`kind kind--${facet.kind}`}>{KIND_LABEL[facet.kind]}</span>
-                      )}
-                    </dt>
-                    <dd title={facet.note ?? undefined}>{formatFacetValue(facet.value, facet.unit)}</dd>
-                  </div>
-                ))}
+              {facets.map((facet) => (
+                <div key={facet.key} className={`facet sev-text-${facet.severity}`}>
+                  <dt>
+                    {facet.label}
+                    {facet.kind !== 'observed' && <Mark kind={markForKind(facet.kind, mocked)} />}
+                  </dt>
+                  <dd title={facet.note ?? undefined}>{formatFacetValue(facet.value, facet.unit)}</dd>
+                </div>
+              ))}
             </dl>
           )}
         </>
@@ -136,9 +125,9 @@ function SignalCard({ signal, now }: { signal: SignalAssessment; now: number }) 
         <span className={`freshness freshness--${signal.freshness}`}>
           {unavailable
             ? 'No data'
-            : `${stale ? 'STALE · ' : ''}Updated ${relativeTime(signal.observed_at, now)} · ${FRESHNESS_LABEL[signal.freshness]}`}
+            : `${stale ? 'STALE · ' : ''}${relativeTime(signal.observed_at, now)} · ${FRESHNESS_LABEL[signal.freshness]}`}
         </span>
-        {!unavailable && <span className={`confidence confidence--${signal.confidence}`}>{signal.confidence}</span>}
+        {!unavailable && <span className={`confidence confidence--${signal.confidence}`}>{signal.confidence} confidence</span>}
         <span className="card__source">
           {signal.sources.map((s) => s.name).join(', ')}
           {mocked && <span className="tag tag--mock">mock</span>}

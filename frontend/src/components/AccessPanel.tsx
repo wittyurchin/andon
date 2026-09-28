@@ -1,8 +1,8 @@
-import { TREND_ARROW } from '../lib/format'
+import { corridorStates } from '../lib/corridors'
 import { distance } from '../lib/evidence'
-import type { EvidenceBundle, Observation, Severity, Trend } from '../types'
-
-const RANK: Record<string, number> = { none: 0, low: 1, medium: 2, high: 3, severe: 4 }
+import { TREND_ARROW } from '../lib/format'
+import type { EvidenceBundle, Observation, Trend } from '../types'
+import { Mark, Pips, markFor } from './marks'
 
 /**
  * Which roads into the kitchen are affected, corridor by corridor. This is the
@@ -12,17 +12,15 @@ const RANK: Record<string, number> = { none: 0, low: 1, medium: 2, high: 3, seve
 export function AccessPanel({ evidence }: { evidence: EvidenceBundle }) {
   const graph = evidence.access_graph
   if (!graph) return null
-
-  const flows = evidence.observations.filter((o) => o.category === 'traffic.flow' || o.category === 'traffic.corridor_eta')
-  const incidents = evidence.incidents.filter((i) => i.status === 'active')
+  const states = corridorStates(evidence)
 
   return (
     <section className="panel">
       <header className="panel__head">
-        <h2 className="panel__title">Access corridors</h2>
+        <h2 className="panel__title">Access roads</h2>
         <span className="panel__meta" title={graph.derivation}>
           {graph.source === 'osm' && 'Derived from OpenStreetMap roads'}
-          {graph.source === 'radial' && 'Radial approximation — road data unavailable'}
+          {graph.source === 'radial' && 'Radial approximation: road data unavailable'}
           {graph.source === 'configured' && 'Operator-configured points'}
           {graph.source === 'mock' && 'Simulated road network'}
           {' · '}
@@ -40,29 +38,24 @@ export function AccessPanel({ evidence }: { evidence: EvidenceBundle }) {
 
       <ul className="access">
         {graph.approaches.map((approach) => {
-          const readings = flows.filter((o) => o.subject_id === approach.id)
-          const worst = readings.reduce<Severity | null>((acc, o) => {
-            const band = o.value.band as Severity | null
-            return band && (acc === null || RANK[band] > RANK[acc]) ? band : acc
-          }, null)
-          const onIt = incidents.filter((i) => i.spatial.approach_ids.includes(approach.id))
+          const { readings, incidents, level } = states[approach.id]
           const trend = evidence.trends.find(
             (t) => t.subject_id === approach.id && (t.category === 'traffic.flow' || t.category === 'traffic.corridor_eta'),
           )
-          const state: Severity = onIt.length && RANK[worst ?? 'none'] < 3 ? 'high' : worst ?? 'none'
 
           return (
-            <li key={approach.id} className={`access__item sev-${readings.length || onIt.length ? state : 'none'}`}>
+            <li key={approach.id} className={`access__item ${level ? `sev-${level}` : 'is-unknown'}`}>
               <div className="access__head">
                 <span className="access__label">{approach.label}</span>
-                <span className="access__meta">
-                  {approach.road_class ?? 'unclassified'} · nearest {distance(approach.distance_m)}
-                  {approach.is_approximation && <span className="tag tag--mock">approximation</span>}
-                </span>
+                {level ? <Pips level={level} /> : <span className="tag tag--unknown">Unknown</span>}
               </div>
+              <span className="access__meta">
+                {approach.road_class ?? 'unclassified'} · nearest point {distance(approach.distance_m)}
+                {approach.is_approximation && <span className="tag tag--mock">approximation</span>}
+              </span>
 
               {readings.length === 0 ? (
-                <p className="access__none">No traffic reading for this corridor — unknown, not clear.</p>
+                <p className="access__none">No traffic reading for this road: unknown, not clear.</p>
               ) : (
                 readings.map((o) => <Reading key={o.id} o={o} />)
               )}
@@ -74,9 +67,10 @@ export function AccessPanel({ evidence }: { evidence: EvidenceBundle }) {
                 </p>
               )}
 
-              {onIt.map((i) => (
+              {incidents.map((i) => (
                 <p key={i.id} className="access__incident">
-                  ⚠ {i.incident_type.replace(/_/g, ' ')} on this corridor — {i.description}
+                  <span className="access__incident-type">{i.incident_type.replace(/_/g, ' ')} on this road</span>
+                  {i.description}
                   <span className="access__src">
                     {i.source_name}
                     {i.source_type === 'mock' && ' (mock)'}
@@ -97,12 +91,13 @@ function Reading({ o }: { o: Observation }) {
   const v = o.value
   const text =
     o.category === 'traffic.corridor_eta'
-      ? `${Math.round(Number(v.travel_time_s))} s along the corridor (no free-flow reference)`
+      ? `${Math.round(Number(v.travel_time_s))} s along the road (no free-flow reference)`
       : v.congestion_index === null || v.congestion_index === undefined
         ? `${v.current_speed_kmh ?? '—'} km/h, no free-flow reference`
-        : `${v.band} · ${Math.round(Number(v.current_speed_kmh))} of ${Math.round(Number(v.free_flow_speed_kmh))} km/h`
+        : `${v.band} · ${Math.round(Number(v.current_speed_kmh))} of ${Math.round(Number(v.free_flow_speed_kmh))} km/h free-flow`
   return (
     <p className={`access__reading sev-text-${(v.band as string) ?? 'none'}`}>
+      <Mark kind={markFor(o)} compact />
       <span className="access__value">{text}</span>
       <span className="access__src">
         {o.source_name}

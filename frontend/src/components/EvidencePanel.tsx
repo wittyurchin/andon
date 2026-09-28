@@ -1,5 +1,6 @@
-import { KIND_LABEL, relativeTime } from '../lib/format'
+import { relativeTime } from '../lib/format'
 import type { Evidence, NormalizedSituation } from '../types'
+import { Mark, markForKind } from './marks'
 
 /** "Why?" — the strongest evidence behind the current assessment. */
 export function EvidencePanel({
@@ -37,7 +38,7 @@ export function EvidencePanel({
         <ul className="evidence">
           {items.map((item, index) => (
             <li key={`${item.source_id}-${index}`} className="evidence__item">
-              <span className={`kind kind--${item.kind}`}>{KIND_LABEL[item.kind]}</span>
+              <Mark kind={markForKind(item.kind)} />
               <span className="evidence__text">{item.text}</span>
               <span className="evidence__meta">
                 {item.source_name} · {relativeTime(item.observed_at, now)}

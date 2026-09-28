@@ -1,6 +1,6 @@
-import { HEALTH_LABEL } from '../lib/evidence'
 import { relativeTime } from '../lib/format'
 import type { EvidenceBundle, SourceHealthRecord } from '../types'
+import { Lamp } from './marks'
 
 const KIND_ORDER = ['weather', 'radar', 'traffic', 'incidents']
 
@@ -24,7 +24,7 @@ export function SourcesPanel({ evidence, now }: { evidence: EvidenceBundle; now:
         </span>
       </header>
 
-      <table className="sources">
+      <div className="table-scroll"><table className="sources">
         <thead>
           <tr>
             <th>Source</th>
@@ -40,7 +40,7 @@ export function SourcesPanel({ evidence, now }: { evidence: EvidenceBundle; now:
             <Row key={r.source_id} r={r} now={now} />
           ))}
         </tbody>
-      </table>
+      </table></div>
 
       <div className="coverage">
         <h3 className="report__subtitle">What we can’t see</h3>
@@ -55,7 +55,7 @@ export function SourcesPanel({ evidence, now }: { evidence: EvidenceBundle; now:
           {coverage.incidents && coverage.incidents.categories_not_covered.length > 0 && (
             <li>
               No incident source reports: {coverage.incidents.categories_not_covered.map((c) => c.replace(/_/g, ' ')).join(', ')}
-              {' '}— silence on these is not an all-clear.
+              . Silence on these is not an all-clear.
             </li>
           )}
           {(coverage.stale_sources ?? []).length > 0 && <li>Stale: {coverage.stale_sources!.join(', ')}.</li>}
@@ -83,7 +83,7 @@ function Row({ r, now }: { r: SourceHealthRecord; now: number }) {
       </td>
       <td>{r.source_kind}</td>
       <td>
-        <span className={`health health--${r.status}`}>{HEALTH_LABEL[r.status]}</span>
+        <Lamp status={r.status} />
         {requires && <span className="sources__attribution">needs {requires}</span>}
       </td>
       <td>{r.last_success_at ? relativeTime(r.last_success_at, now) : 'never'}</td>

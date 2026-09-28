@@ -33,43 +33,45 @@ export function Header({
   return (
     <header className="header">
       <div className="header__identity">
-        <p className="eyebrow">Restaurant Situation</p>
+        <p className="eyebrow">Andon · Restaurant situation</p>
         <h1 className="header__name">{result?.situation.restaurant.name ?? config.name}</h1>
         <p className="header__coords">
-          Latitude {config.lat.toFixed(5)} &nbsp;·&nbsp; Longitude {config.lon.toFixed(5)}
+          <span className="mono">{config.lat.toFixed(5)}, {config.lon.toFixed(5)}</span>
           <button className="link" onClick={onEdit} type="button">
-            Change
+            Change location
           </button>
         </p>
       </div>
 
       <div className="header__controls">
-        <p className={`header__updated ${freshnessClass}`}>
-          <span className="dot" aria-hidden="true" />
-          {loading ? 'Updating…' : `Last updated ${relativeTime(generatedAt, now)}`}
-        </p>
-        <p className="header__timing">
-          <span>Last updated: {clockTime(generatedAt)}</span>
-          <span>
-            {config.refreshMs === 0
-              ? 'Next refresh: manual only'
-              : deferred
-                ? 'Next refresh: paused (tab hidden)'
-                : nextRefreshAt
-                  ? `Next refresh: ${clockTime(new Date(nextRefreshAt).toISOString())} (in ${countdown(nextRefreshAt - now)})`
-                  : 'Next refresh: scheduling…'}
-          </span>
-        </p>
+        <div className="header__clock">
+          <p className={`header__updated ${freshnessClass}`}>
+            <span className="dot" aria-hidden="true" />
+            {loading ? 'Updating…' : `Updated ${relativeTime(generatedAt, now)}`}
+          </p>
+          <p className="header__timing">
+            <span>Last {clockTime(generatedAt)}</span>
+            <span>
+              {config.refreshMs === 0
+                ? 'Next: manual only'
+                : deferred
+                  ? 'Next: paused (tab hidden)'
+                  : nextRefreshAt
+                    ? `Next ${clockTime(new Date(nextRefreshAt).toISOString())} (in ${countdown(nextRefreshAt - now)})`
+                    : 'Next: scheduling…'}
+            </span>
+          </p>
+        </div>
         <div className="header__buttons">
+          <RefreshSelect value={config.refreshMs} onChange={onRefreshMsChange} />
           <button
             className="button button--primary"
             onClick={onRefresh}
             disabled={loading}
             type="button"
           >
-            {loading ? 'Refreshing…' : 'Refresh Now'}
+            {loading ? 'Refreshing…' : 'Refresh now'}
           </button>
-          <RefreshSelect value={config.refreshMs} onChange={onRefreshMsChange} />
         </div>
       </div>
     </header>

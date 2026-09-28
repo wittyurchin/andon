@@ -36,14 +36,15 @@ export type CoverageKey =
   | 'forecast'
   | 'alerts'
 
-export const COVERAGE_ICON: Record<CoverageKey, string> = {
-  precipitation: '\u{1F327}️', // 🌧️
-  wind: '\u{1F343}', // 🍃
-  gusts: '\u{1F32C}️', // 🌬️
-  visibility: '\u{1F441}️', // 👁️
-  temperature: '\u{1F321}️', // 🌡️
-  forecast: '\u{1F4C5}', // 📅
-  alerts: '\u{26A0}️', // ⚠️
+/** Short labels for the coverage strip. Plain words, not pictograms. */
+export const COVERAGE_SHORT: Record<CoverageKey, string> = {
+  precipitation: 'Rain',
+  wind: 'Wind',
+  gusts: 'Gust',
+  visibility: 'Vis',
+  temperature: 'Temp',
+  forecast: 'Fcst',
+  alerts: 'Alerts',
 }
 
 export const COVERAGE_LABEL: Record<CoverageKey, string> = {
@@ -126,6 +127,54 @@ const KSNDMC_RESTRICTED: PricingInfo = {
   note: "No documented API or feed; KSNDMC's site disclaimer restricts commercial and decision-making use.",
 }
 
+// backend/andon/providers/weather/openweathermap.py
+const OWM_FREE: PricingInfo = {
+  label: 'Free (commercial ok)',
+  tier: 'free',
+  note: 'Free Current Weather tier permits commercial use; attribution required above the free plan (openweathermap.org/faq).',
+}
+const OWM_COVERAGE: Record<CoverageKey, CoverageFact> = {
+  precipitation: COVERED('rain.1h, mm/h. Absent means no rain, per its docs.'),
+  wind: COVERED('Converted from m/s (documented as m/s even under metric units).'),
+  gusts: COVERED('Only when the response includes one.'),
+  visibility: COVERED('Metres, capped at 10 km by the provider.'),
+  temperature: COVERED('Celsius.'),
+  forecast: NOT_COVERED('Only the current-conditions endpoint is called.'),
+  alerts: NOT_COVERED('Alerts live on the paid One Call product, which needs a card on file. Not requested.'),
+}
+
+// backend/andon/providers/weather/weatherapi.py
+const WEATHERAPI_FREE: PricingInfo = {
+  label: 'Free (commercial ok)',
+  tier: 'free',
+  note: '100,000 calls/month free, no card, commercial use permitted (weatherapi.com/pricing.aspx).',
+}
+const WEATHERAPI_COVERAGE: Record<CoverageKey, CoverageFact> = {
+  precipitation: UNUSABLE('precip_mm is reported, but its time window is undocumented. Stored verbatim, never treated as a rate.'),
+  wind: COVERED('km/h as reported.'),
+  gusts: COVERED('km/h as reported.'),
+  visibility: COVERED('Converted from km.'),
+  temperature: COVERED('Celsius.'),
+  forecast: NOT_COVERED('Only the current-conditions endpoint is called.'),
+  alerts: NOT_COVERED('Documented for the USA, UK and Europe, not confirmed for India. Not requested.'),
+}
+
+// backend/andon/providers/weather/ndma_sachet.py
+const SACHET_FREE: PricingInfo = {
+  label: 'Free (public domain)',
+  tier: 'free',
+  note: 'The feed states its own copyright as public domain. No key.',
+}
+const SACHET_COVERAGE: Record<CoverageKey, CoverageFact> = {
+  precipitation: NOT_COVERED('Alerts only; no rain measurement.'),
+  wind: NOT_COVERED('Alerts only.'),
+  gusts: NOT_COVERED('Alerts only.'),
+  visibility: NOT_COVERED('Alerts only.'),
+  temperature: NOT_COVERED('Alerts only.'),
+  forecast: NOT_COVERED('Alerts carry their own validity window, not a forecast series.'),
+  alerts: COVERED("Official alerts, matched to the kitchen's state, not district (polygon endpoint returned 403)."),
+}
+
 const SIMULATED: PricingInfo = {
   label: 'Simulated',
   tier: 'n/a',
@@ -137,6 +186,9 @@ export const WEATHER_SOURCE_META: Record<string, WeatherSourceMeta> = {
   'awc-metar': { pricing: METAR_FREE, coverage: METAR_COVERAGE },
   'imd-aws': { pricing: IMD_UNPUBLISHED, coverage: IMD_COVERAGE },
   ksndmc: { pricing: KSNDMC_RESTRICTED, coverage: null }, // never called — nothing to cover
+  openweathermap: { pricing: OWM_FREE, coverage: OWM_COVERAGE },
+  weatherapi: { pricing: WEATHERAPI_FREE, coverage: WEATHERAPI_COVERAGE },
+  'ndma-sachet': { pricing: SACHET_FREE, coverage: SACHET_COVERAGE },
   // backend/andon/providers/weather/mock.py — mirrors the real source it imitates.
   'mock-weather': { pricing: SIMULATED, coverage: { ...OPEN_METEO_COVERAGE, alerts: COVERED('Simulated warning above a rain threshold.') } },
   'mock-station': { pricing: SIMULATED, coverage: { ...METAR_COVERAGE } },

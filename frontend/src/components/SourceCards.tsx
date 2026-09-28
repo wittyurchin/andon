@@ -1,9 +1,10 @@
 import { useState } from 'react'
-import { HEALTH_LABEL, age, describe, distance } from '../lib/evidence'
+import { age, describe, distance } from '../lib/evidence'
 import { relativeTime } from '../lib/format'
-import { COVERAGE_ICON, COVERAGE_LABEL, coverageFor, pricingFor } from '../lib/sourceMeta'
+import { COVERAGE_LABEL, COVERAGE_SHORT, coverageFor, pricingFor } from '../lib/sourceMeta'
 import type { EvidenceBundle, Observation, SourceHealthRecord } from '../types'
 import { FreshnessMeter } from './FreshnessMeter'
+import { HEALTH_WORD, Lamp, Mark, markFor } from './marks'
 import { SourceDetailPanel } from './SourceDetailPanel'
 
 const KIND_ORDER = ['weather', 'radar', 'traffic', 'incidents']
@@ -26,39 +27,60 @@ export function SourceCards({ evidence, now }: { evidence: EvidenceBundle; now: 
   const weatherSources = sources.filter((h) => h.source_kind === 'weather')
   const otherSources = sources.filter((h) => h.source_kind !== 'weather')
   const graph = evidence.access_graph
+  const working = sources.filter((h) => ['healthy', 'stale', 'degraded'].includes(h.status)).length
 
   return (
-    <section className="panel">
+    <section className="panel panel--channels">
       <header className="panel__head">
         <h2 className="panel__title">Sources</h2>
-        <span className="panel__meta">Click a source to see everything it has reported</span>
+        <span className="panel__meta">
+          {working} of {sources.length} reporting · click a source to see everything it has told us
+        </span>
       </header>
 
       {weatherSources.length > 0 && (
-        <div className="source-cards source-cards--row">
-          {weatherSources.map((h) => (
-            <SourceCard key={h.source_id} h={h} evidence={evidence} now={now} onOpen={() => setSelected(h.source_id)} />
-          ))}
+        <div className="channel-group">
+          <p className="channel-group__label">Weather</p>
+          <div className="source-cards source-cards--row">
+            {weatherSources.map((h) => (
+              <SourceCard key={h.source_id} h={h} evidence={evidence} now={now} onOpen={() => setSelected(h.source_id)} />
+            ))}
+          </div>
         </div>
       )}
 
-      <div className="source-cards">
-        {otherSources.map((h) => (
-          <SourceCard key={h.source_id} h={h} evidence={evidence} now={now} onOpen={() => setSelected(h.source_id)} />
-        ))}
-        {graph && (
-          <button type="button" className="source-card" onClick={() => setSelected(ROAD_NETWORK_ID)}>
-            <span className="source-card__kind">{KIND_LABEL.roads}</span>
-            <span className="source-card__name">
-              {graph.source === 'osm' ? 'OpenStreetMap' : graph.source === 'mock' ? 'Simulated roads' : graph.source === 'radial' ? 'Radial approximation' : 'Configured points'}
-            </span>
-            <span className={`health health--${graph.source === 'radial' ? 'degraded' : 'healthy'}`}>
-              {graph.source === 'radial' ? 'Approximation' : 'Built'}
-            </span>
-            <span className="source-card__headline">{graph.approaches.length} access corridors</span>
-            <span className="source-card__meta">built {relativeTime(graph.built_at, now)}</span>
-          </button>
-        )}
+      <div className="channel-group">
+        <p className="channel-group__label">Radar, roads and incidents</p>
+        <div className="source-cards">
+          {otherSources.map((h) => (
+            <SourceCard key={h.source_id} h={h} evidence={evidence} now={now} onOpen={() => setSelected(h.source_id)} />
+          ))}
+          {graph && (
+            <button type="button" className="source-card source-card--healthy" onClick={() => setSelected(ROAD_NETWORK_ID)}>
+              <span className="source-card__top">
+                <span className="source-card__kind">{KIND_LABEL.roads}</span>
+                <span className={`lamp lamp--${graph.source === 'radial' ? 'dim' : 'lit'}`}>
+                  <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true">
+                    {graph.source === 'radial' ? (
+                      <>
+                        <circle cx="5" cy="5" r="3.6" className="lamp__ring" />
+                        <path d="M5 1.4 A3.6 3.6 0 0 1 5 8.6 Z" />
+                      </>
+                    ) : (
+                      <circle cx="5" cy="5" r="4" />
+                    )}
+                  </svg>
+                  {graph.source === 'radial' ? 'Approximation' : 'Built'}
+                </span>
+              </span>
+              <span className="source-card__name">
+                {graph.source === 'osm' ? 'OpenStreetMap' : graph.source === 'mock' ? 'Simulated roads' : graph.source === 'radial' ? 'Radial approximation' : 'Configured points'}
+              </span>
+              <span className="source-card__headline">{graph.approaches.length} access roads mapped</span>
+              <span className="source-card__meta">built {relativeTime(graph.built_at, now)}</span>
+            </button>
+          )}
+        </div>
       </div>
 
       {selected && (
@@ -84,69 +106,101 @@ function SourceCard({ h, evidence, now, onOpen }: {
   const current = evidence.observations.filter((o) => o.source_id === h.source_id)
   const forecasts = evidence.forecasts.filter((o) => o.source_id === h.source_id)
   const incidents = evidence.incidents.filter((i) => i.source_id === h.source_id && i.status === 'active')
-  const lead =
+  // Verbatim "report" rows are bookkeeping (undocumented units, which state
+  // was checked), not a reading to lead with.
+  const isReport = (o: Observation) => o.category.endsWith('_report')
+  const alerts = forecasts.filter((o) => o.category === 'weather.alert')
+  const alertSource = coverageFor(h.source_id)?.alerts.coverage === 'covered' && !current.length && !forecasts.some((o) => o.category === 'weather.precipitation')
+  const lead: Observation | undefined =
     current.find((o) => o.category === 'weather.precipitation' || (o.category === 'radar.reflectivity' && o.subject_id === 'at_site')) ??
-    current[0] ??
+    current.find((o) => !isReport(o)) ??
     forecasts.find((o) => o.valid_at === o.observed_at && o.category === 'weather.precipitation') ??
+    alerts[0] ??
+    forecasts.find((o) => !isReport(o)) ??
+    current[0] ??
     forecasts[0]
+  const checkedState = forecasts.find(isReport)?.value.reported as Record<string, unknown> | undefined
 
   let headline = 'No data'
   if (h.source_kind === 'incidents' && h.status !== 'disabled' && h.status !== 'misconfigured') {
     headline = `${incidents.length} active incident${incidents.length === 1 ? '' : 's'}`
+  } else if (alertSource && ['healthy', 'stale', 'degraded'].includes(h.status)) {
+    const state = typeof checkedState?.state_checked === 'string' ? ` for ${checkedState.state_checked}` : ''
+    headline = alerts.length
+      ? `${alerts.length} active alert${alerts.length === 1 ? '' : 's'}${state}: ${describe(alerts[0])}`
+      : `No active official alert${state}`
   } else if (lead) {
     headline = describe(lead)
   } else if (!['healthy', 'stale', 'degraded'].includes(h.status)) {
-    headline = (h.error ?? (h.details.reason as string | undefined) ?? HEALTH_LABEL[h.status]).slice(0, 110)
+    const reason = h.error ?? (h.details.reason as string | undefined) ?? HEALTH_WORD[h.status]
+    // Cut at a word boundary; the full reason is one click away in the drawer.
+    headline = reason.length > 110 ? `${reason.slice(0, 110).replace(/\s+\S*$/, '')}…` : reason
   }
   const noData = !lead && h.source_kind !== 'incidents'
-  const fullReason = h.error ?? (h.details.reason as string | undefined) ?? HEALTH_LABEL[h.status]
+  const fullReason = h.error ?? (h.details.reason as string | undefined) ?? HEALTH_WORD[h.status]
 
-  const reading = isWeather ? readingBadge(h, lead) : null
+  const mark = alertSource
+    ? alerts.length ? markFor(alerts[0]) : null
+    : lead && !isReport(lead) ? markFor(lead) : h.source_type === 'mock' ? 'simulated' : null
   const pricing = isWeather ? pricingFor(h.source_id, h.licence_note) : null
   const coverage = isWeather ? coverageFor(h.source_id) : null
   const locationLabel = lead?.value.location_label as string | undefined
+  const down = !['healthy', 'stale', 'degraded'].includes(h.status)
 
   return (
     <button type="button" className={`source-card source-card--${h.status}`} onClick={onOpen}>
-      <span className="source-card__kind">
-        {KIND_LABEL[h.source_kind] ?? h.source_kind}
-        {h.source_type === 'mock' && <span className="tag tag--mock">mock</span>}
+      <span className="source-card__top">
+        <span className="source-card__kind">
+          {KIND_LABEL[h.source_kind] ?? h.source_kind}
+          {h.source_type === 'mock' && <span className="tag tag--mock">mock</span>}
+        </span>
+        <Lamp status={h.status} />
       </span>
       <span className="source-card__name">{h.source_name}</span>
-      <span className="source-card__badges">
-        <span className={`health health--${h.status}`}>{HEALTH_LABEL[h.status]}</span>
-        {noData && (
-          <span className="info-icon tip" title={`No data — ${fullReason}`} aria-label={`No data — ${fullReason}`}>
-            ⓘ
-          </span>
-        )}
-        {reading && (
-          <span className={`tag tag--reading tag--reading-${reading.cls} tip`} title={reading.title}>
-            {reading.label}
-          </span>
-        )}
-        {pricing && <span className="tag tag--pricing tip" title={pricing.note}>{pricing.label}</span>}
-      </span>
-      <span className="source-card__headline">{headline}</span>
+
+      {(mark || pricing || noData) && (
+        <span className="source-card__badges">
+          {mark && !down && <Mark kind={mark} />}
+          {pricing && (
+            <span className="tag tag--pricing tip" title={pricing.note}>
+              {pricing.label}
+            </span>
+          )}
+          {noData && !down && (
+            <span className="info-icon tip" title={`No data: ${fullReason}`} aria-label={`No data: ${fullReason}`}>
+              no data
+            </span>
+          )}
+        </span>
+      )}
+
+      <span className={`source-card__headline ${down ? 'is-reason' : ''}`}>{headline}</span>
+
       {isWeather && (locationLabel || lead?.spatial.distance_m != null) && (
-        <span className="source-card__location tip" title="Distance and location of the measurement point">
-          📍 {locationLabel ?? 'Location unknown'}
+        <span className="source-card__location tip" title="Where this reading was taken, relative to the kitchen">
+          <svg width="9" height="9" viewBox="0 0 10 10" aria-hidden="true">
+            <circle cx="5" cy="5" r="3.5" fill="none" strokeWidth="1.4" stroke="currentColor" />
+            <circle cx="5" cy="5" r="1" fill="currentColor" />
+          </svg>
+          {locationLabel ?? 'Location unknown'}
           {lead?.spatial.distance_m != null && ` · ${distance(lead.spatial.distance_m)}${lead.spatial.bearing ? ` ${lead.spatial.bearing}` : ''}`}
         </span>
       )}
+
       {coverage && (
-        <span className="source-card__coverage">
+        <span className="coverage-strip" aria-label="What this source can report">
           {(Object.keys(coverage) as (keyof typeof coverage)[]).map((key) => (
             <span
               key={key}
-              className={`coverage-icon coverage-icon--${coverage[key].coverage} tip`}
+              className={`coverage-chip coverage-chip--${coverage[key].coverage} tip`}
               title={`${COVERAGE_LABEL[key]}: ${coverage[key].note}`}
             >
-              {COVERAGE_ICON[key]}
+              {COVERAGE_SHORT[key]}
             </span>
           ))}
         </span>
       )}
+
       <span className="source-card__meta">
         {h.last_success_at ? `last success ${relativeTime(h.last_success_at, now)}` : 'never succeeded'}
         {isWeather && h.response_age_seconds !== null ? (
@@ -156,30 +210,10 @@ function SourceCard({ h, evidence, now, onOpen }: {
             staleAfterSeconds={h.details.stale_after_seconds as number | undefined}
           />
         ) : (
-          h.response_age_seconds !== null && ` · data ${age(h.response_age_seconds)}`
+          h.response_age_seconds !== null && <span>data {age(h.response_age_seconds)}</span>
         )}
-        {current.length + forecasts.length > 0 && ` · ${current.length + forecasts.length} readings`}
+        {current.length + forecasts.length > 0 && <span>{current.length + forecasts.length} readings</span>}
       </span>
     </button>
   )
-}
-
-const READING_TITLE: Record<string, string> = {
-  observation: 'Real — measured or reported by the source, not modelled.',
-  model: "A model's estimate of current conditions, not a measurement.",
-  prediction: "A model's forecast for a future time, not a measurement.",
-  simulated: 'Simulated data — not a real provider.',
-}
-
-/** Real / Model / Prediction / Simulated, from the card's lead observation. */
-function readingBadge(
-  h: SourceHealthRecord,
-  lead: Observation | undefined,
-): { label: string; cls: string; title: string } | null {
-  if (h.source_type === 'mock') return { label: 'Simulated', cls: 'simulated', title: READING_TITLE.simulated }
-  if (!lead) return null
-  if (lead.kind === 'observation') return { label: 'Real', cls: 'observation', title: READING_TITLE.observation }
-  if (lead.valid_at && lead.valid_at !== lead.observed_at)
-    return { label: 'Prediction', cls: 'prediction', title: READING_TITLE.prediction }
-  return { label: 'Model', cls: 'model', title: READING_TITLE.model }
 }

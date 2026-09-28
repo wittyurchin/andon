@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { APPLICABILITY_LABEL, CATEGORY_LABEL, age, describe, distance } from '../lib/evidence'
 import { clockTime } from '../lib/format'
 import type { EvidenceBundle, Observation } from '../types'
+import { Mark, markFor } from './marks'
 
 export type InspectorFilter = 'all' | 'weather' | 'radar' | 'traffic' | 'forecast'
 
@@ -59,15 +60,16 @@ export function EvidenceInspector({
       {evidence.conflicts.map((conflict) => (
         <div key={conflict.category + conflict.subject} className="conflict">
           <p className="conflict__title">
-            <strong>Sources disagree</strong> — {conflict.subject} ({conflict.spread} band
-            {conflict.spread === 1 ? '' : 's'} apart). Both are kept; neither is averaged away.
+            <span className="disagreement__tag">Sources disagree</span>
+            {conflict.subject}: {conflict.spread} band{conflict.spread === 1 ? '' : 's'} apart. Both are kept;
+            neither is averaged away.
           </p>
           <ul className="conflict__members">
             {conflict.members.map((m) => {
               const o = byId.get(m.observation_id)
               return (
                 <li key={m.observation_id}>
-                  <span className={`kind kind--${m.kind === 'observation' ? 'observed' : 'forecast'}`}>{m.kind}</span>
+                  <Mark kind={o ? markFor(o) : m.kind === 'observation' ? 'measured' : 'model'} />
                   <span className="conflict__source">{m.source_name}</span>
                   <span className={`sev-text-${m.band ?? 'none'} conflict__band`}>{m.band}</span>
                   <span className="conflict__meta">
@@ -99,7 +101,7 @@ export function EvidenceInspector({
       {rows.length === 0 ? (
         <p className="empty">No evidence of this kind right now.</p>
       ) : (
-        <table className="evidence-table">
+        <div className="table-scroll"><table className="evidence-table">
           <thead>
             <tr>
               <th>What</th>
@@ -114,7 +116,7 @@ export function EvidenceInspector({
             {rows.map((o) => (
               <tr key={o.id} className={o.stale ? 'is-stale' : ''}>
                 <td>
-                  <span className={`kind kind--${o.kind === 'observation' ? 'observed' : 'forecast'}`}>{o.kind}</span>
+                  <Mark kind={markFor(o)} />
                   <span className="evidence-table__cat">{CATEGORY_LABEL[o.category] ?? o.category}</span>
                   {o.subject_id && <span className="evidence-table__subject">{o.subject_id.split(':').pop()}</span>}
                 </td>
@@ -134,7 +136,7 @@ export function EvidenceInspector({
                   <span className={`evidence-table__age ${o.stale ? 'freshness--stale' : ''}`}>
                     {o.stale ? 'STALE · ' : ''}
                     {age(o.freshness_seconds)}
-                    {o.observed_at_basis === 'received' ? ' (receipt time — source gave none)' : ''}
+                    {o.observed_at_basis === 'received' ? ' (receipt time: source gave none)' : ''}
                   </span>
                 </td>
                 <td title={o.spatial.basis}>
@@ -148,7 +150,7 @@ export function EvidenceInspector({
               </tr>
             ))}
           </tbody>
-        </table>
+        </table></div>
       )}
 
       {filter === 'forecast' && evidence.forecasts.length > 12 && (
