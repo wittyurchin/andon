@@ -1,0 +1,19 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "andon",
+      "runtimeExecutable": "./run.sh",
+      "runtimeArgs": [],
+      "port": 8000,
+      "autoPort": true
+    },
+    {
+      "name": "andon-dev",
+      "runtimeExecutable": "./run.sh",
+      "runtimeArgs": ["dev"],
+      "port": 5173,
+      "autoPort": true
+    }
+  ]
+}

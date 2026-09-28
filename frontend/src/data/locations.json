@@ -1,0 +1,9 @@
+[
+  { "label": "Bengaluru — HSR Layout", "name": "HSR Layout Kitchen", "lat": 12.9130159, "lon": 77.6421571 },
+  { "label": "Bengaluru — Indiranagar", "name": "Indiranagar Kitchen", "lat": 12.9782668, "lon": 77.6191627 },
+  { "label": "Bengaluru — Whitefield", "name": "Whitefield Kitchen", "lat": 12.9942614, "lon": 77.6159754 },
+  { "label": "Mumbai — Bhandup", "name": "Bhandup Kitchen", "lat": 19.1518169, "lon": 72.8586009 },
+  { "label": "Mumbai — Bandra", "name": "Bandra Kitchen", "lat": 19.0596, "lon": 72.8295 },
+  { "label": "London — Shoreditch", "name": "Shoreditch Kitchen", "lat": 51.5262, "lon": -0.0784 },
+  { "label": "Singapore — Tanjong Pagar", "name": "Tanjong Pagar Kitchen", "lat": 1.2766, "lon": 103.8456 }
+]
