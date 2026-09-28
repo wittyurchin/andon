@@ -362,6 +362,23 @@ class TestNoFabricatedFields:
         precip = next(f for f in bundle.forecasts if f.source_id == "m" and f.category == "weather.precipitation")
         assert precip.value["location_label"] == "Model grid cell"
 
+    async def test_model_reported_values_are_never_dropped_or_banded(self, tmp_path):
+        # A model-kind source (no station identity) with undocumented-unit
+        # values, e.g. WeatherAPI.com's precip_mm with no documented time
+        # window: stored verbatim, not silently dropped by the model path.
+        from andon.geo import offset
+
+        service, _, clock = make_service(tmp_path)
+        snapshot = WeatherSnapshot(
+            observed_at=clock.now, grid_location=offset(HSR, 200, 1500),
+            reported={"precip_mm": 0.3, "precip_units_documented": False}, alerts_supported=False,
+        )
+        service.registry.weather = [Scripted("weather", "wa", lambda _ctx: snapshot)]
+        bundle = await refresh(service)
+        report = next(f for f in bundle.forecasts if f.source_id == "wa" and f.category == "weather.model_report")
+        assert report.value["reported"] == {"precip_mm": 0.3, "precip_units_documented": False}
+        assert report.value["units_documented"] is False
+
     async def test_mock_evidence_is_labelled_mock(self, tmp_path):
         service, _, clock = make_service(tmp_path)
         service.registry.traffic = [Scripted("traffic", "sim", flow(clock, lambda i: 0.3), mode="mock")]

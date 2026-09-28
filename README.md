@@ -54,6 +54,9 @@ To add live signals, copy `.env.example` to `.env` and fill in what you have:
 | `ANDON_IMD_API_KEY` + `ANDON_IMD_AUTH_HEADER` or `ANDON_IMD_AUTH_QUERY_PARAM` | IMD weather stations (IMD does not document how the key is sent) |
 | `ANDON_OPEN_METEO_API_KEY` | Open-Meteo's commercial API (the free one is non-commercial) |
 | `ANDON_OPENWEATHERMAP_API_KEY` | A second, independent weather source — free, no card needed |
+| `ANDON_WEATHERAPI_KEY` | A third weather source — free, no card needed, already in production use elsewhere |
+
+No key needed at all: **NDMA Sachet** — official India government disaster alerts, matched to the restaurant's state (public domain feed, on by default). See [docs/provider-verification.md](docs/provider-verification.md#ndma-sachet----adapter-built-on-by-default-no-key) for why it's state-level rather than exact-point.
 | `ANDON_RAINVIEWER_TERMS_ACKNOWLEDGED=true` | RainViewer radar — only for personal or educational use |
 
 Other settings — provider lists, the SQLite path and retention, freshness
@@ -76,7 +79,7 @@ refresh runs the full pipeline:
 ```
 Access graph        which roads lead to the kitchen (OpenStreetMap)
       ↓
-Data sources        Open-Meteo · OpenWeatherMap · METAR · IMD · radar · TomTom · Mappls · mocks
+Data sources        Open-Meteo · OpenWeatherMap · WeatherAPI · METAR · IMD · radar · TomTom · Mappls · mocks
       ↓
 Evidence            observations / forecasts with provenance, stored in SQLite
       ↓

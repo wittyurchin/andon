@@ -84,6 +84,47 @@ export const SOURCE_INFO: Record<string, SourceInfoEntry> = {
       'Same engineering-default confidence as Open-Meteo (0.6): a blended estimate for a location, not a direct measurement.',
   },
 
+  weatherapi: {
+    summary:
+      'A third, independent weather vendor — already in production use elsewhere in a rain-decision system that ' +
+      'combines it with official government alerts and satellite data.',
+    how:
+      'Free tier, no card required, commercial use permitted. Its docs don’t state whether a reading is a station ' +
+      'report or a blended estimate, and the payload carries no station identity, so — like the other two model ' +
+      'sources — it is treated as model evidence, not an observation.',
+    reports: [
+      'Wind, visibility and temperature in the units this app already uses internally, so no conversion is needed',
+    ],
+    limits: [
+      'Its precipitation field (precip_mm) has no documented accumulation window — unlike Open-Meteo’s or ' +
+        'OpenWeatherMap’s explicit "per hour" — so it is stored as reported, not treated as a rate or banded into a severity level',
+      'Its alerts feature is documented for the USA, UK and Europe, with no confirmation for India, and is not requested here',
+    ],
+    confidence:
+      'Same engineering-default confidence as the other model sources (0.6): a blended estimate for a location, not a direct measurement.',
+  },
+
+  'ndma-sachet': {
+    summary:
+      'Official India government disaster alerts — the same national feed a real production system (a ' +
+      'restaurant chain’s rain-decision sheet) uses for its severe-weather warnings.',
+    how:
+      'Free public feed, public domain, no key. The restaurant’s state is resolved once (via OpenStreetMap, ' +
+      'cached — a restaurant’s state never changes) and checked against each active alert’s sender and area text. ' +
+      'Severity is graded by keyword (heavy/moderate/watch), not by the feed’s own label, because states use that ' +
+      'label inconsistently — a same-day outlook is downgraded to a watch rather than treated as imminent.',
+    reports: [
+      'Active official alerts for the restaurant’s state — event, headline, severity, and when it started and expires',
+    ],
+    limits: [
+      'Matched at STATE level, not district. The feed publishes an exact polygon for each alert, but that ' +
+        'endpoint was unreachable when this was built (HTTP 403) — every alert produced here says "state-level, ' +
+        'exact area not confirmed" in its own headline, so this is never mistaken for a precise local warning',
+      'Outside India, this always reports no alerts, by construction — no Indian state name will ever match',
+      'River-level flood forecasts (Central Water Commission alerts) are graded as a watch, never a rain alert',
+    ],
+  },
+
   'imd-aws': {
     summary:
       'India Meteorological Department automatic weather stations. The adapter is built, but IMD does not ' +

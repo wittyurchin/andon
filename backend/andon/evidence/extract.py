@@ -177,6 +177,13 @@ class Extractor:
                                      "temperature_c": snap.temperature_c,
                                      "location_label": location_label,
                                  }, **common))
+        if snap.reported:
+            out.append(self._obs(restaurant, response, category="weather.model_report", subject=subject,
+                                 valid_at=issued, value={
+                                     "reported": snap.reported,
+                                     "units_documented": False,
+                                     "location_label": location_label,
+                                 }, **common))
         for point in [*snap.recent, *snap.outlook]:
             if point.at == issued or point.precipitation_mm_h is None:
                 continue

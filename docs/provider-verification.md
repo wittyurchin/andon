@@ -64,6 +64,34 @@ we do not have.
 | ❌ Coordinate snapping | Whether the response's `coord` echoes the exact query point or a nearby station/city is not documented either way — no resolution or "grid cell" claim is made, only plain distance. |
 | Adapter behaviour | `ANDON_OPENWEATHERMAP_API_KEY` unset → `misconfigured`. 401 → `unauthorized`. |
 
+### WeatherAPI.com — 🔒 *adapter built, needs `ANDON_WEATHERAPI_KEY`*
+
+| | |
+|---|---|
+| ✅ Endpoint | `GET https://api.weatherapi.com/v1/current.json?key=&q=lat,lon` (`weatherapi.com/docs/`) |
+| ✅ Units | Both metric and imperial fields always present, no `units` param — `wind_kph`/`gust_kph`/`vis_km` are already what this app uses internally. |
+| ❌ `precip_mm` time window | **Not documented** (unlike Open-Meteo's or OpenWeatherMap's explicit "mm/h"). Stored verbatim under `reported`, never banded — treating it as a rate would be a fabricated unit. |
+| ❌ Data basis | Docs describe capabilities (real-time/forecast/historical) but make no statement about station vs blended data, and the payload carries no station id/name — extracted as model evidence, same rule as Open-Meteo/OpenWeatherMap. |
+| ✅ Location | `location.lat`/`lon` echo the **matched** location, not necessarily the query point — no resolution claim made. |
+| ✅ Licence | Free tier: 100,000 calls/month, no card required, **commercial use permitted** (attribution requested, not mandatory). |
+| ✅ Errors | 401 (code 2006) = invalid key. **403 (code 2007) = monthly quota exceeded** — documented as quota, not authorization; reported as unavailable, not unauthorized. |
+| ⚠️ Alerts | Documented for "USA, UK, Europe and Rest of the World"; **not confirmed for India**. Not requested — see the ported Google Apps Script (Rain Config sheet) sourcing its official alerts from NDMA Sachet instead of WeatherAPI. |
+
+### NDMA Sachet — ✅ *adapter built, on by default (no key)*
+
+Ported from a real, production Google Apps Script (shared by the user,
+2026-09-28) that fuses this feed with WeatherAPI.com and a satellite
+rainfall job into one restaurant-chain "Live Weather" sheet.
+
+| | |
+|---|---|
+| ✅ Feed | `https://sachet.ndma.gov.in/cap_public_website/rss/rss_india.xml` — public RSS, no key, `<copyright>public domain</copyright>` stated in the feed. Each item links to `FetchXMLFile?identifier=` returning CAP 1.2 XML. |
+| ❌ Polygon geometry | Each `<cap:info>` links a "Polygon URL" (`FetchPolygonXMLFile?identifier=`) with the alert's actual shape. **Returned HTTP 403 on every live test from this environment** — exact point-in-polygon matching against a restaurant's coordinates is not available to us. |
+| ⚠️ Area matching | Without polygon access, and without a maintained district/zone alias table (which the source Apps Script has via an external `store_district_map.py` and this project does not), matching is done at **state level**: a restaurant's state is resolved once via OpenStreetMap Nominatim reverse geocoding, then checked against the alert's sender/area/headline text. **Coarser than the source system (state, not district) — every alert produced here says so in its own headline.** |
+| ✅ Nominatim | `nominatim.openstreetmap.org/reverse`, ODbL, no key. Usage policy caps public use at 1 req/s and requires caching results — satisfied because a restaurant's state is resolved once and cached for the process's life. |
+| ✅ Severity | Graded by keyword (heavy/moderate/watch/ignore), not CAP's own `severity` label — ported directly from the source script's finding that "states use labels differently." A same-day outlook ("next 24/48/72 hours") is downgraded to watch; CWC-sourced alerts (river-level forecasts) are always watch, never a rain alert. |
+| Adapter behaviour | No `precheck()` gate — always active. Outside India, no Indian state name ever matches, so it always yields no alerts there, by construction. |
+
 ### KSNDMC (Karnataka) — ❌ *adapter boundary only, disabled*
 
 | | |
@@ -138,3 +166,5 @@ we do not have.
 4. RainViewer: commercial terms, or an alternative licensed radar source (IMD DWR products are listed as "radar/specialized information where API access permits").
 5. Open-Meteo: commercial subscription before production use.
 6. TomTom: account, quotas and terms.
+7. WeatherAPI.com: `precip_mm`'s accumulation window; India alert coverage.
+8. NDMA Sachet: why `FetchPolygonXMLFile` returns 403 from this environment (may work from a different network/referer) — would allow exact-point matching instead of state-level.

@@ -1,3 +1,4 @@
+import { clockTime } from './format'
 import type { Applicability, HealthStatus, Observation } from '../types'
 
 export const APPLICABILITY_LABEL: Record<Applicability, string> = {
@@ -26,6 +27,7 @@ export const CATEGORY_LABEL: Record<string, string> = {
   'weather.temperature': 'Temperature',
   'weather.alert': 'Weather warning',
   'weather.station_report': 'Station report (unitless)',
+  'weather.model_report': 'Model report (unitless)',
   'radar.reflectivity': 'Radar echo',
   'traffic.flow': 'Traffic flow',
   'traffic.corridor_eta': 'Corridor travel time',
@@ -61,7 +63,13 @@ export function describe(o: Observation): string {
       return `${distance(v.visibility_m as number)} → ${v.band ?? 'unbanded'}`
     case 'weather.temperature':
       return `${num(v.temperature_c, 1)} °C`
+    case 'weather.alert': {
+      const band = typeof v.band === 'string' ? v.band : 'unbanded'
+      const ends = typeof v.ends_at === 'string' ? ` · ends ${clockTime(v.ends_at)}` : ''
+      return `${band} — ${String(v.headline ?? v.event ?? 'alert')}${ends}`
+    }
     case 'weather.station_report':
+    case 'weather.model_report':
       return `reported verbatim, units undocumented: ${JSON.stringify(v.reported)}`
     case 'radar.reflectivity': {
       const range = v.dbz_min === v.dbz_max ? `${v.dbz_min}` : `${v.dbz_min}–${v.dbz_max}`

@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<?xml-stylesheet title="XSL_formatting" type="text/xsl" href="feed.xsl"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>All India: CAP Disaster Alert Feeds</title>
+<item>
+      <title>अगले 3 घंटों में बागपत, मेरठ, मुज़फ़्फ़रनगर और शामली के कुछ इलाकों में बिजली कड़कने और मध्यम से तेज़ बारिश होने की बहुत संभावना है।</title>
+      <description/>
+      <category>Met</category>
+      <link>https://sachet.ndma.gov.in/cap_public_website/FetchXMLFile?identifier=1790590664714013</link>
+      <author>controlroom@ndma.gov.in (IMD Lucknow)</author>
+      <guid isPermaLink="false">1790590664714013</guid>
+      <pubDate>Mon, 28 Sep 2026 10:20:09 GMT</pubDate>
+    </item>
+<item>
+      <title>उत्तर प्रदेश के बलिया ज़िले में टर्टीपार के पास घाघरा नदी आज सुबह 8:00 बजे भी भीषण बाढ़ की स्थिति में बह रही है।</title>
+      <description/>
+      <category>Met</category>
+      <link>https://sachet.ndma.gov.in/cap_public_website/FetchXMLFile?identifier=1790589786767013</link>
+      <author>controlroom@ndma.gov.in (CWC)</author>
+      <guid isPermaLink="false">1790589786767013</guid>
+      <pubDate>Mon, 28 Sep 2026 10:14:55 GMT</pubDate>
+    </item>
+<item>
+      <title>River Kosi at Basua in Supaul district of Bihar continues to flow in above normal flood situation at 3:00 pm today.</title>
+      <description/>
+      <category>Met</category>
+      <link>https://sachet.ndma.gov.in/cap_public_website/FetchXMLFile?identifier=1790589787006016</link>
+      <author>controlroom@ndma.gov.in (CWC)</author>
+      <guid isPermaLink="false">1790589787006016</guid>
+      <pubDate>Mon, 28 Sep 2026 10:03:08 GMT</pubDate>
+    </item>
+  </channel>
+</rss>

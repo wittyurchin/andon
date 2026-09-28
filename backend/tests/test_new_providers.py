@@ -8,7 +8,7 @@ nothing else.
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import httpx
@@ -483,6 +483,289 @@ class TestOpenWeatherMap:
         source = OpenWeatherMapProvider("k").source
         assert source.id == "openweathermap"
         assert source.kind == "weather"
+
+
+# --------------------------------------------------------------------------
+# WeatherAPI.com
+# --------------------------------------------------------------------------
+
+
+def weatherapi_payload(**overrides) -> dict:
+    base = {
+        "location": {"lat": 12.91, "lon": 77.65},
+        "current": {
+            "last_updated_epoch": 1790000000,
+            "temp_c": 26.8,
+            "wind_kph": 14.4,
+            "gust_kph": 21.6,
+            "precip_mm": 0.3,
+            "vis_km": 6.0,
+            "humidity": 78,
+            "condition": {"text": "Patchy rain nearby", "code": 1063},
+        },
+    }
+    base.update(overrides)
+    return base
+
+
+class TestWeatherApiCom:
+    def test_missing_key_is_misconfigured(self):
+        from andon.providers.weather.weatherapi import WeatherApiComProvider
+
+        status, details = WeatherApiComProvider(None).precheck()
+        assert status is HealthStatus.MISCONFIGURED
+        assert "ANDON_WEATHERAPI_KEY" in details["reason"]
+
+    async def test_401_is_unauthorized(self):
+        from andon.providers.weather.weatherapi import WeatherApiComProvider
+
+        provider = WeatherApiComProvider("topsecretkey")
+        provider._client = mock_client(lambda request: httpx.Response(401))
+        response = await provider.fetch(HSR)
+        assert response.health_hint is HealthStatus.UNAUTHORIZED
+        assert response.details["key_problem"] == "rejected"
+        assert "topsecretkey" not in response.error
+
+    async def test_403_is_quota_not_unauthorized(self):
+        # WeatherAPI documents 403 as the monthly quota (error 2007), not auth.
+        from andon.providers.weather.weatherapi import WeatherApiComProvider
+
+        provider = WeatherApiComProvider("k")
+        provider._client = mock_client(lambda request: httpx.Response(403))
+        response = await provider.fetch(HSR)
+        assert response.health_hint is HealthStatus.UNAVAILABLE
+        assert response.details["key_problem"] == "limit_reached"
+
+    async def test_wind_and_visibility_need_no_conversion(self):
+        from andon.providers.weather.weatherapi import WeatherApiComProvider
+
+        provider = WeatherApiComProvider("k")
+        provider._client = mock_client(lambda request: httpx.Response(200, json=weatherapi_payload()))
+        response = await provider.fetch(HSR)
+        snap = response.data
+        assert snap.wind_speed_kmh == 14.4
+        assert snap.wind_gust_kmh == 21.6
+        assert snap.visibility_m == 6000
+        assert snap.temperature_c == 26.8
+        assert snap.condition == "Patchy rain nearby"
+        assert snap.grid_location == GeoPoint(lat=12.91, lon=77.65)
+
+    async def test_precip_mm_is_never_treated_as_a_rate(self):
+        # No documented time window for precip_mm, unlike Open-Meteo/OpenWeatherMap's mm/h.
+        from andon.providers.weather.weatherapi import WeatherApiComProvider
+
+        provider = WeatherApiComProvider("k")
+        provider._client = mock_client(lambda request: httpx.Response(200, json=weatherapi_payload()))
+        response = await provider.fetch(HSR)
+        snap = response.data
+        assert snap.precipitation_mm_h is None
+        assert snap.reported["precip_mm"] == 0.3
+        assert snap.reported["precip_units_documented"] is False
+
+    async def test_no_station_identity_and_no_alerts_claimed(self):
+        from andon.providers.weather.weatherapi import WeatherApiComProvider
+
+        provider = WeatherApiComProvider("k")
+        provider._client = mock_client(lambda request: httpx.Response(200, json=weatherapi_payload()))
+        response = await provider.fetch(HSR)
+        assert response.data.station_id is None
+        assert response.data.station_name is None
+        assert response.data.alerts == []
+        assert response.data.alerts_supported is False
+
+    def test_source_declares_correctly(self):
+        from andon.providers.weather.weatherapi import WeatherApiComProvider
+
+        source = WeatherApiComProvider("k").source
+        assert source.id == "weatherapi"
+        assert source.kind == "weather"
+
+
+# --------------------------------------------------------------------------
+# NDMA Sachet
+# --------------------------------------------------------------------------
+
+
+class TestSachetClassification:
+    """Ported from the source Apps Script's rlClassifyAlert_ — same fixtures,
+    same expected grades, so the port is provably faithful."""
+
+    def test_heavy_rain_keywords(self):
+        from andon.providers.weather.ndma_sachet import classify_alert
+
+        assert classify_alert("Heavy to Very Heavy rainfall expected", "IMD Pune") == "heavy"
+        assert classify_alert("Cloudburst likely over isolated pockets", "IMD Shimla") == "heavy"
+
+    def test_moderate_rain_keywords(self):
+        from andon.providers.weather.ndma_sachet import classify_alert
+
+        assert classify_alert("Moderate Rain with thunder likely", "IMD Lucknow") == "moderate"
+
+    def test_light_rain_is_watch(self):
+        from andon.providers.weather.ndma_sachet import classify_alert
+
+        assert classify_alert("Light rain and drizzle expected", "IMD Chennai") == "watch"
+
+    def test_no_rain_keywords_is_ignored(self):
+        from andon.providers.weather.ndma_sachet import classify_alert
+
+        assert classify_alert("Heatwave conditions likely over parts of the state", "IMD Bhopal") == "ignore"
+
+    def test_cwc_sender_is_always_a_watch_not_a_rain_alert(self):
+        # River-level flood forecasts, not a rain nowcast.
+        from andon.providers.weather.ndma_sachet import classify_alert
+
+        assert classify_alert("Severe flood situation, heavy rainfall in catchment", "CWC") == "watch"
+
+    def test_next_24_hour_outlook_is_downgraded_from_heavy_to_watch(self):
+        from andon.providers.weather.ndma_sachet import classify_alert
+
+        assert classify_alert("Heavy rain very likely in the next 24 hours", "IMD Guwahati") == "watch"
+
+    def test_imminent_heavy_rain_is_not_downgraded(self):
+        # "next 3 hours" is not a day-ahead outlook.
+        from andon.providers.weather.ndma_sachet import classify_alert
+
+        assert classify_alert("Heavy rain likely in the next 3 hours", "IMD Lucknow") == "heavy"
+
+
+class TestSachetFeedParsing:
+    def test_rss_ids_are_extracted(self):
+        from andon.providers.weather.ndma_sachet import _parse_rss_ids
+
+        ids = _parse_rss_ids((FIXTURES / "sachet_rss_sample.xml").read_text())
+        assert ids == ["1790590664714013", "1790589786767013", "1790589787006016"]
+
+    def test_cap_alert_is_parsed_from_the_english_info_block(self):
+        from andon.providers.weather.ndma_sachet import _parse_cap
+
+        parsed = _parse_cap("1790590664714013", (FIXTURES / "sachet_cap_sample.xml").read_text())
+        assert parsed.level == "moderate"
+        assert parsed.sender == "Uttar-Pradesh-SDMA"
+        assert "Baghpat" in parsed.headline
+        assert parsed.effective.isoformat() == "2026-09-28T15:46:00+05:30"
+        assert parsed.expires.isoformat() == "2026-09-28T18:46:00+05:30"
+
+    def test_state_match_is_hyphen_and_case_insensitive(self):
+        from andon.providers.weather.ndma_sachet import _parse_cap
+
+        parsed = _parse_cap("1790590664714013", (FIXTURES / "sachet_cap_sample.xml").read_text())
+        assert parsed.covers_state("Uttar Pradesh") is True
+        assert parsed.covers_state("uttar pradesh") is True
+        assert parsed.covers_state("Karnataka") is False
+
+    def test_active_window_is_respected(self):
+        from andon.providers.weather.ndma_sachet import _parse_cap
+
+        parsed = _parse_cap("1790590664714013", (FIXTURES / "sachet_cap_sample.xml").read_text())
+        before = parsed.effective - timedelta(minutes=1)
+        during = parsed.effective + timedelta(minutes=1)
+        after = parsed.expires + timedelta(minutes=1)
+        assert parsed.active_at(before) is False
+        assert parsed.active_at(during) is True
+        assert parsed.active_at(after) is False
+
+    def test_malformed_cap_xml_is_skipped_not_raised(self):
+        from andon.providers.weather.ndma_sachet import _parse_cap
+
+        assert _parse_cap("x", "<not valid xml") is None
+
+
+class TestSachetProvider:
+    async def test_matching_state_produces_an_alert_with_its_caveat(self):
+        from andon.providers.weather.ndma_sachet import NdmaSachetAlertProvider
+
+        provider = NdmaSachetAlertProvider()
+
+        def handler(request):
+            if "rss" in str(request.url):
+                return httpx.Response(200, text=(FIXTURES / "sachet_rss_sample.xml").read_text())
+            if "FetchXMLFile" in str(request.url):
+                return httpx.Response(200, text=(FIXTURES / "sachet_cap_sample.xml").read_text())
+            if "nominatim" in str(request.url):
+                return httpx.Response(200, json={"address": {"state": "Uttar Pradesh", "country_code": "in"}})
+            return httpx.Response(404)
+
+        provider._client = mock_client(handler)
+        response = await provider.fetch(GeoPoint(lat=28.98, lon=77.70), FetchContext())
+        assert response.ok
+        assert len(response.data.alerts) >= 1
+        alert = response.data.alerts[0]
+        assert "state-level, exact area not confirmed" in alert.headline
+        assert alert.severity_hint is Severity.MEDIUM
+
+    async def test_non_matching_state_produces_no_alerts(self):
+        from andon.providers.weather.ndma_sachet import NdmaSachetAlertProvider
+
+        provider = NdmaSachetAlertProvider()
+
+        def handler(request):
+            if "rss" in str(request.url):
+                return httpx.Response(200, text=(FIXTURES / "sachet_rss_sample.xml").read_text())
+            if "FetchXMLFile" in str(request.url):
+                return httpx.Response(200, text=(FIXTURES / "sachet_cap_sample.xml").read_text())
+            if "nominatim" in str(request.url):
+                return httpx.Response(200, json={"address": {"state": "Karnataka", "country_code": "in"}})
+            return httpx.Response(404)
+
+        provider._client = mock_client(handler)
+        response = await provider.fetch(HSR, FetchContext())
+        assert response.ok
+        assert response.data.alerts == []
+
+    async def test_outside_india_never_matches_by_construction(self):
+        from andon.providers.weather.ndma_sachet import NdmaSachetAlertProvider
+
+        provider = NdmaSachetAlertProvider()
+
+        def handler(request):
+            if "rss" in str(request.url):
+                return httpx.Response(200, text=(FIXTURES / "sachet_rss_sample.xml").read_text())
+            if "FetchXMLFile" in str(request.url):
+                return httpx.Response(200, text=(FIXTURES / "sachet_cap_sample.xml").read_text())
+            if "nominatim" in str(request.url):
+                return httpx.Response(200, json={"address": {"state": "England", "country_code": "gb"}})
+            return httpx.Response(404)
+
+        provider._client = mock_client(handler)
+        response = await provider.fetch(GeoPoint(lat=51.5262, lon=-0.0784), FetchContext())
+        assert response.ok
+        assert response.data.alerts == []
+
+    async def test_state_lookup_is_cached_across_fetches(self):
+        # Nominatim's usage policy requires caching results on our side.
+        from andon.providers.weather.ndma_sachet import NdmaSachetAlertProvider
+
+        provider = NdmaSachetAlertProvider()
+        geocode_calls = []
+
+        def handler(request):
+            if "rss" in str(request.url):
+                return httpx.Response(200, text=(FIXTURES / "sachet_rss_sample.xml").read_text())
+            if "FetchXMLFile" in str(request.url):
+                return httpx.Response(200, text=(FIXTURES / "sachet_cap_sample.xml").read_text())
+            if "nominatim" in str(request.url):
+                geocode_calls.append(1)
+                return httpx.Response(200, json={"address": {"state": "Karnataka", "country_code": "in"}})
+            return httpx.Response(404)
+
+        provider._client = mock_client(handler)
+        await provider.fetch(HSR, FetchContext())
+        await provider.fetch(HSR, FetchContext())
+        assert len(geocode_calls) == 1
+
+    def test_precheck_needs_no_key(self):
+        from andon.providers.weather.ndma_sachet import NdmaSachetAlertProvider
+
+        assert NdmaSachetAlertProvider().precheck() is None
+
+    def test_source_declares_correctly(self):
+        from andon.providers.weather.ndma_sachet import NdmaSachetAlertProvider
+
+        source = NdmaSachetAlertProvider().source
+        assert source.id == "ndma-sachet"
+        assert source.kind == "weather"
+        assert source.licence_note is None  # public domain, stated by the feed itself
 
 
 # --------------------------------------------------------------------------

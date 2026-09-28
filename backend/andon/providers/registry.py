@@ -41,8 +41,10 @@ from .traffic.tomtom import TomTomTrafficProvider
 from .weather.awc_metar import AwcMetarWeatherProvider
 from .weather.imd import ImdWeatherProvider
 from .weather.mock import MockStationProvider, MockWeatherProvider
+from .weather.ndma_sachet import NdmaSachetAlertProvider
 from .weather.open_meteo import OpenMeteoWeatherProvider
 from .weather.openweathermap import OpenWeatherMapProvider
+from .weather.weatherapi import WeatherApiComProvider
 
 log = logging.getLogger(__name__)
 
@@ -133,6 +135,10 @@ class ProviderRegistry:
             return disabled.ksndmc_weather()
         if name == "openweathermap":
             return OpenWeatherMapProvider(s.openweathermap_api_key, s.provider_timeout_s)
+        if name == "weatherapi":
+            return WeatherApiComProvider(s.weatherapi_key, s.provider_timeout_s)
+        if name == "ndma_sachet":
+            return NdmaSachetAlertProvider(s.provider_timeout_s)
         if name == "mock":
             return MockWeatherProvider(self.clock)
         if name == "mock_station":

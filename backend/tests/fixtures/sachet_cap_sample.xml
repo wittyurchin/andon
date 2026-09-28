@@ -1,0 +1,63 @@
+<cap:alert xmlns:cap="urn:oasis:names:tc:emergency:cap:1.2">
+<cap:identifier>IN-1790590664714013_13</cap:identifier>
+<cap:sender>Uttar-Pradesh-SDMA</cap:sender>
+<cap:sent>2026-09-28T15:50:07+05:30</cap:sent>
+<cap:status>Actual</cap:status>
+<cap:msgType>Update</cap:msgType>
+<cap:scope>Public</cap:scope>
+<cap:restriction/>
+<cap:addresses/>
+<cap:note/>
+<cap:references>IMD-Lucknow,IN-1790590664714013_58,2026-09-28T15:47:15+05:30</cap:references>
+<cap:incidents/>
+<cap:info>
+<cap:language>en-IN</cap:language>
+<cap:category>Met</cap:category>
+<cap:event>Moderate Rain</cap:event>
+<cap:urgency>Expected</cap:urgency>
+<cap:severity>Severe</cap:severity>
+<cap:certainty>Likely</cap:certainty>
+<cap:audience>1</cap:audience>
+<cap:effective>2026-09-28T15:46:00+05:30</cap:effective>
+<cap:onset>2026-09-28T15:50:07+05:30</cap:onset>
+<cap:expires>2026-09-28T18:46:00+05:30</cap:expires>
+<cap:headline>Thunder with Lightning and Moderate to Intense spells of Rain  is very likely to occur at isolated places over Baghpat, Meerut, Muzaffarnagar, Shamli in next 3 hours.</cap:headline>
+<cap:description/>
+<cap:instruction>Please follow SDMA guidelines.</cap:instruction>
+<cap:contact/>
+<cap:parameter>
+<cap:valueName>Polygon URL</cap:valueName>
+<cap:value>https://sachet.ndma.gov.in/cap_public_website/FetchPolygonXMLFile?identifier=1790590664714013</cap:value>
+</cap:parameter>
+<cap:area>
+<cap:areaDesc>WEST UP</cap:areaDesc>
+<cap:altitude>0</cap:altitude>
+<cap:ceiling>0</cap:ceiling>
+</cap:area>
+</cap:info>
+<cap:info>
+<cap:language>HI</cap:language>
+<cap:category>Met</cap:category>
+<cap:event>Moderate Rain</cap:event>
+<cap:urgency>Expected</cap:urgency>
+<cap:severity>Severe</cap:severity>
+<cap:certainty>Likely</cap:certainty>
+<cap:audience>1</cap:audience>
+<cap:effective>2026-09-28T15:46:00+05:30</cap:effective>
+<cap:onset>2026-09-28T15:50:07+05:30</cap:onset>
+<cap:expires>2026-09-28T18:46:00+05:30</cap:expires>
+<cap:headline>अगले 3 घंटों में बागपत, मेरठ, मुज़फ़्फ़रनगर और शामली के कुछ इलाकों में बिजली कड़कने और मध्यम से तेज़ बारिश होने की बहुत संभावना है।</cap:headline>
+<cap:description/>
+<cap:instruction>Please follow SDMA guidelines.</cap:instruction>
+<cap:contact/>
+<cap:parameter>
+<cap:valueName>Polygon URL</cap:valueName>
+<cap:value>https://sachet.ndma.gov.in/cap_public_website/FetchPolygonXMLFile?identifier=1790590664714013</cap:value>
+</cap:parameter>
+<cap:area>
+<cap:areaDesc>WEST UP</cap:areaDesc>
+<cap:altitude>0</cap:altitude>
+<cap:ceiling>0</cap:ceiling>
+</cap:area>
+</cap:info>
+</cap:alert>

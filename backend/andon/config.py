@@ -21,7 +21,10 @@ MockScenario = Literal["calm", "deteriorating", "storm", "clearing", "demo"]
 AppMode = Literal["auto", "mock"]
 
 WEATHER_PROVIDERS = frozenset(
-    {"auto", "open_meteo", "awc_metar", "imd", "ksndmc", "openweathermap", "mock", "mock_station"}
+    {
+        "auto", "open_meteo", "awc_metar", "imd", "ksndmc", "openweathermap", "weatherapi",
+        "ndma_sachet", "mock", "mock_station",
+    }
 )
 TRAFFIC_PROVIDERS = frozenset({"auto", "tomtom", "mappls", "mock", "mock_outage"})
 INCIDENT_PROVIDERS = frozenset({"auto", "tomtom", "mappls", "btp", "bmc", "mock"})
@@ -101,6 +104,13 @@ class Settings(BaseSettings):
     # card on file even for its free daily quota — out of scope while this
     # stays a no-billing-surprises default (see docs/provider-verification.md).
     openweathermap_api_key: str | None = None
+
+    # WeatherAPI.com's free "Current Weather" API. Free tier permits
+    # commercial use, no card required. Its precip_mm has no documented time
+    # window, so it is stored verbatim rather than treated as a rate; alerts
+    # are not requested (undocumented for India — see
+    # docs/provider-verification.md).
+    weatherapi_key: str | None = None
 
     # IMD requires a key, but its documentation does not say how the key is
     # sent (docs/provider-verification.md). Both must be configured; we do
@@ -232,10 +242,14 @@ class Settings(BaseSettings):
                 ]
                 if self.openweathermap_api_key:
                     keyed.append("openweathermap")
+                if self.weatherapi_key:
+                    keyed.append("weatherapi")
                 return keyed
             # Model + station, plus the India sources whose adapters exist but
             # are not usable yet — they appear in source health with the reason.
-            return ["open_meteo", "awc_metar", "imd", "ksndmc", "openweathermap"]
+            # ndma_sachet needs no key or licence acknowledgement (public
+            # domain feed), so it is on by default outside mock mode.
+            return ["open_meteo", "awc_metar", "imd", "ksndmc", "openweathermap", "weatherapi", "ndma_sachet"]
         return _dedupe([n for n in configured if n != "auto"])
 
     @property
